@@ -138,3 +138,8 @@ GitHub Actions baut dann mit [GoReleaser](https://goreleaser.com) die Programme 
 
 - Android-App mit grafischer Oberfläche (die Schlüssel sind kompatibel)
 - Mehrere Empfänger pro Nachricht
+
+## Lizenz
+
+[MIT](LICENSE). hush nutzt [age](https://github.com/FiloSottile/age) (BSD-3-Clause) und die
+Terminal-Bibliotheken von [Charm](https://github.com/charmbracelet) (MIT).

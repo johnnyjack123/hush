@@ -18,6 +18,7 @@ import (
 	"github.com/johnnyjack123/hush/internal/keys"
 	"github.com/johnnyjack123/hush/internal/message"
 	"github.com/johnnyjack123/hush/internal/store"
+	"github.com/johnnyjack123/hush/internal/termsafe"
 	"github.com/johnnyjack123/hush/internal/tui"
 )
 
@@ -39,7 +40,7 @@ func Run(args []string, version string) int {
 	case "encrypt", "e":
 		err = cmdEncrypt(args)
 	case "decrypt", "d":
-		err = cmdDecrypt()
+		err = cmdDecrypt(args)
 	case "key":
 		err = cmdKey()
 	case "contacts", "ls":
@@ -77,6 +78,13 @@ func printUsage(w io.Writer) {
 func usageError(key string) error {
 	fmt.Fprintln(os.Stderr, T(key))
 	return errUsage
+}
+
+// out writes a line to stdout and returns any failure, such as a full disk,
+// which would otherwise leave a script with a cut-off result and exit code 0.
+func out(s string) error {
+	_, err := fmt.Fprintln(os.Stdout, s)
+	return err
 }
 
 func runTUI() error {
@@ -126,8 +134,13 @@ func cmdEncrypt(args []string) error {
 	if isTerminal(os.Stdin) {
 		text, err = readSecret(T("cli.enter_text"))
 	} else {
+		// Reading a little past the limit makes sure a cut never lands on
+		// trailing newlines, where it would go unnoticed.
 		var b []byte
-		b, err = io.ReadAll(io.LimitReader(os.Stdin, message.MaxTextSize+1))
+		b, err = io.ReadAll(io.LimitReader(os.Stdin, message.MaxTextSize+3))
+		if len(b) > message.MaxTextSize+2 {
+			return message.ErrTooLong
+		}
 		text = strings.TrimRight(string(b), "\r\n")
 	}
 	if err != nil {
@@ -140,11 +153,13 @@ func cmdEncrypt(args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(sealed)
-	return nil
+	return out(sealed)
 }
 
-func cmdDecrypt() error {
+func cmdDecrypt(args []string) error {
+	if len(args) > 0 {
+		return usageError("cli.usage_decrypt")
+	}
 	s, err := store.Open()
 	if err != nil {
 		return err
@@ -177,31 +192,47 @@ func cmdDecrypt() error {
 	if err != nil {
 		return err
 	}
-	reportSender(book, o)
-	fmt.Print(o.Text)
-	if isTerminal(os.Stdout) && !strings.HasSuffix(o.Text, "\n") {
-		fmt.Println()
+	reportSender(book, id, o)
+	if !isTerminal(os.Stdout) {
+		// Redirected: the exact text, as scripts need it.
+		_, err := fmt.Fprint(os.Stdout, o.Text)
+		return err
+	}
+	// The text comes from the sender. On a terminal it is stripped of
+	// control characters, so it cannot move the cursor over the sender line,
+	// and indented, so that none of its lines can pass for that line.
+	for _, line := range strings.Split(termsafe.Text(strings.TrimSuffix(o.Text, "\n")), "\n") {
+		if err := out("│ " + line); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 // reportSender writes the signature status to stderr so stdout carries only the text.
-func reportSender(book *store.Book, o *message.Opened) {
-	if o.Sender == nil {
-		fmt.Fprintln(os.Stderr, "⚠ "+T("opened.unsigned"))
-		return
+func reportSender(book *store.Book, me *keys.Identity, o *message.Opened) {
+	var c *store.Contact
+	if o.Sender != nil {
+		c = book.ByKey(*o.Sender)
 	}
-	c := book.ByKey(*o.Sender)
 	switch {
+	case o.Sender == nil:
+		fmt.Fprintln(os.Stderr, "⚠ "+T("opened.unsigned"))
+	case *o.Sender == me.Public():
+		fmt.Fprintln(os.Stderr, "✓ "+T("opened.signed_self"))
 	case c == nil:
 		fmt.Fprintln(os.Stderr, "⚠ "+T("opened.unknown_sender"))
 		fmt.Fprintln(os.Stderr, "  "+T("contact.fingerprint")+": "+o.Sender.Fingerprint().String())
 		fmt.Fprintln(os.Stderr, "  "+o.Sender.String())
 	case c.Verified:
-		fmt.Fprintln(os.Stderr, "✓ "+T("opened.signed_verified", c.Name))
+		fmt.Fprintln(os.Stderr, "✓ "+T("opened.signed_verified", termsafe.Line(c.Name)))
 	default:
-		fmt.Fprintln(os.Stderr, "✓ "+T("opened.signed", c.Name))
+		fmt.Fprintln(os.Stderr, "✓ "+T("opened.signed", termsafe.Line(c.Name)))
 		fmt.Fprintln(os.Stderr, "⚠ "+T("opened.not_verified"))
+	}
+	// Only the time tells a replayed old message from a new one.
+	if !o.SentAt.IsZero() {
+		fmt.Fprintln(os.Stderr, "  "+T("opened.sent_at", i18n.Time(o.SentAt)))
 	}
 }
 
@@ -214,7 +245,9 @@ func cmdKey() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(id.Public().String())
+	if err := out(id.Public().String()); err != nil {
+		return err
+	}
 	fmt.Fprintln(os.Stderr, T("contact.fingerprint")+": "+id.Public().Fingerprint().String())
 	return nil
 }
@@ -229,8 +262,7 @@ func cmdContacts() error {
 		return err
 	}
 	if len(book.Contacts) == 0 {
-		fmt.Println(T("contacts.empty"))
-		return nil
+		return out(T("contacts.empty"))
 	}
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	for _, c := range book.Contacts {
@@ -238,7 +270,7 @@ func cmdContacts() error {
 		if c.Verified {
 			status = T("contact.verified")
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\n", c.Name, c.PublicKey().Fingerprint(), status)
+		fmt.Fprintf(tw, "%s\t%s\t%s\n", termsafe.Line(c.Name), c.PublicKey().Fingerprint(), status)
 	}
 	return tw.Flush()
 }
@@ -272,8 +304,7 @@ func cmdAdd(args []string) error {
 	if err := s.SaveContacts(book); err != nil {
 		return err
 	}
-	fmt.Println(T("cli.added", book.Contacts[i].Name, pk.Fingerprint()))
-	return nil
+	return out(T("cli.added", termsafe.Line(book.Contacts[i].Name), pk.Fingerprint()))
 }
 
 func cmdInit(args []string) error {
@@ -307,11 +338,13 @@ func cmdInit(args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := s.SaveIdentity(id, passphrase); err != nil {
+	if err := s.CreateIdentity(id, passphrase); err != nil {
 		return err
 	}
 	fmt.Fprintln(os.Stderr, T("cli.created"))
-	fmt.Println(id.Public().String())
+	if err := out(id.Public().String()); err != nil {
+		return err
+	}
 	fmt.Fprintln(os.Stderr, T("contact.fingerprint")+": "+id.Public().Fingerprint().String())
 	return nil
 }
@@ -320,19 +353,33 @@ func isTerminal(f *os.File) bool {
 	return term.IsTerminal(int(f.Fd()))
 }
 
+// maxPromptInput is the longest line a terminal prompt passes on intact: in
+// canonical mode macOS cuts lines at 1024 bytes and Linux at 4096.
+const maxPromptInput = 1023
+
 // readSecret prompts on the terminal without echo, even when stdin is a pipe.
 func readSecret(prompt string) (string, error) {
 	fmt.Fprint(os.Stderr, prompt)
 	defer fmt.Fprintln(os.Stderr)
-	if isTerminal(os.Stdin) {
-		b, err := term.ReadPassword(int(os.Stdin.Fd()))
-		return string(b), err
+	f := os.Stdin
+	if !isTerminal(f) {
+		tty, err := openTTY()
+		if err != nil {
+			return "", errors.New(T("cli.no_tty"))
+		}
+		defer tty.Close()
+		f = tty
 	}
-	tty, err := openTTY()
+	b, err := term.ReadPassword(int(f.Fd()))
 	if err != nil {
-		return "", errors.New(T("cli.no_tty"))
+		return "", err
 	}
-	defer tty.Close()
-	b, err := term.ReadPassword(int(tty.Fd()))
-	return string(b), err
+	// The prompt reads one line. Further pasted lines would stay queued and
+	// reach the shell after hush exits, which would run them as commands and
+	// keep them in its history, so they are discarded and the input refused.
+	pending, _ := discardPending(f)
+	if pending || len(b) >= maxPromptInput {
+		return "", errors.New(T("cli.multiline"))
+	}
+	return string(b), nil
 }

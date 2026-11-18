@@ -1,145 +1,155 @@
 # hush
 
-**Texte sicher verschlüsseln – z. B. um Passwörter per Telegram, WhatsApp & Co. zu verschicken.**
+**English** · [Deutsch](docs/README.de.md)
 
-hush ist ein kleines Terminal-Programm mit komfortabler Tastatur-Oberfläche. Es baut auf
-[age](https://age-encryption.org) auf, verwaltet deine Kontakte lokal und signiert jede
-Nachricht, damit der Empfänger weiß, dass sie wirklich von dir kommt.
+**Encrypt text safely – e.g. to send passwords over Telegram, WhatsApp and the like.**
+
+hush is a small terminal program with a comfortable keyboard interface. It is built on
+[age](https://age-encryption.org), keeps your contacts locally and signs every message, so the
+recipient knows it really came from you.
 
 ```
- hush   Texte sicher verschlüsseln                                          Du 7F3A-91C2
-╭─ Kontakte ─────────────────────╮╭─ Nachricht an Alice ──────────────────────────────╮
-│ ▸ Alice            ✓ 7F3A-91C2 ││ Wird für Alice verschlüsselt und von dir signiert. │
+ hush   encrypt text, safely                                               You 7F3A-91C2
+╭─ Contacts ─────────────────────╮╭─ Message to Alice ─────────────────────────────────╮
+│ ▸ Alice            ✓ 7F3A-91C2 ││ Will be encrypted for Alice and signed by you.     │
 │   Bob                C04E-1B77 ││                                                    │
 │                                ││ hunter2                                            │
-│   + Neuer Kontakt              ││                                                    │
+│   + New contact                ││                                                    │
 ╰────────────────────────────────╯╰────────────────────────────────────────────────────╯
- ctrl+s verschlüsseln · esc abbrechen
+ ctrl+s encrypt · esc cancel
 ```
 
-- Eine einzige Datei (~5 MB), keine Installation, keine Abhängigkeiten
-- Windows, Linux und macOS (Intel & Apple Silicon)
-- Alles bleibt lokal – kein Server, kein Konto
-- Deutsch und Englisch (automatisch nach Systemsprache)
+- A single file (~5 MB): no installation, no dependencies
+- Windows, Linux and macOS (Intel & Apple Silicon)
+- Everything stays local: no server, no account
+- English and German (picked from the system language)
 
-## So funktioniert's
+## How it works
 
-1. **Alice** startet hush. Beim ersten Start wird ihr Schlüsselpaar erzeugt (optional mit Passphrase).
-2. Sie drückt `k`, kopiert ihren **öffentlichen Schlüssel** (`hush1…`) und schickt ihn dir.
-3. Du kopierst den Schlüssel und drückst `a` – hush übernimmt ihn aus der Zwischenablage. Name eingeben, fertig.
-4. Ihr vergleicht einmal eure **Fingerprints** (z. B. `7F3A-91C2-04BE-1D77`) über einen zweiten Kanal,
-   etwa per Anruf. Stimmen sie, markierst du Alice mit `v` als verifiziert.
-5. Kontakt wählen, `e` drücken, Passwort eingeben, `Strg+S`. Die verschlüsselte Nachricht liegt
-   jetzt in der Zwischenablage – einfach in Telegram einfügen.
-6. Alice kopiert die Nachricht und drückt in hush `d`. hush erkennt die Nachricht in der
-   Zwischenablage, entschlüsselt sie und zeigt, dass sie von dir signiert ist.
+1. **Alice** starts hush. On first start it creates her key pair (optionally protected by a passphrase).
+2. She presses `k`, copies her **public key** (`hush1…`) and sends it to you.
+3. You copy the key and press `a`: hush takes it from the clipboard. Enter a name, done.
+4. Once, you compare your **fingerprints** (e.g. `7F3A-91C2-04BE-1D77`) over a second channel,
+   such as a phone call. If they match, mark Alice as verified with `v`.
+5. Pick the contact, press `e`, type the password, press `Ctrl+S`. The encrypted message is now
+   on the clipboard: just paste it into Telegram.
+6. Alice copies the message and presses `d` in hush. hush finds the message on the clipboard,
+   decrypts it and shows that it was signed by you.
 
 ## Installation
 
-Fertige Programme gibt es unter [Releases](../../releases). Herunterladen, entpacken, starten.
+Ready-made binaries are on the [Releases](https://github.com/johnnyjack123/hush/releases) page.
+Download, unpack, run.
 
-- **Windows:** `hush.exe` z. B. nach `%LOCALAPPDATA%\Programs\hush` legen und den Ordner zum `PATH` hinzufügen –
-  oder einfach doppelklicken.
-- **Linux:** `chmod +x hush` und nach `~/.local/bin` verschieben. Für die Zwischenablage wird
-  `wl-clipboard` (Wayland) oder `xclip`/`xsel` (X11) benötigt.
-- **macOS:** Die Programme sind nicht signiert. Einmalig `xattr -d com.apple.quarantine hush` ausführen.
+- **Windows:** put `hush.exe` somewhere like `%LOCALAPPDATA%\Programs\hush` and add that folder to
+  your `PATH`, or simply double-click it.
+- **Linux:** `chmod +x hush` and move it to `~/.local/bin`. Clipboard access needs `wl-clipboard`
+  (Wayland) or `xclip`/`xsel` (X11).
+- **macOS:** the binaries are not signed. Run `xattr -d com.apple.quarantine hush` once.
 
-Aus dem Quellcode (Go ≥ 1.27):
+From source (Go ≥ 1.27):
 
 ```sh
 go install github.com/johnnyjack123/hush@latest
 ```
 
-## Tastenkürzel
+## Keys
 
-| Taste       | Aktion                                              |
-|-------------|-----------------------------------------------------|
-| `↑` `↓`     | Kontakt auswählen                                   |
-| `enter`/`e` | Nachricht an den Kontakt verschlüsseln              |
-| `d`         | Nachricht entschlüsseln (liest die Zwischenablage)  |
-| `a`         | Kontakt hinzufügen                                  |
-| `v`         | Fingerprint als verifiziert markieren               |
-| `r` / `x`   | Kontakt umbenennen / löschen                        |
-| `k`         | Eigenen Schlüssel anzeigen, Passphrase ändern (`p`) |
-| `?`         | Hilfe                                               |
-| `q`         | Beenden                                             |
+| Key         | Action                                           |
+|-------------|--------------------------------------------------|
+| `↑` `↓`     | Select a contact                                 |
+| `enter`/`e` | Encrypt a message to the contact                 |
+| `d`         | Decrypt a message (reads the clipboard)          |
+| `a`         | Add a contact                                    |
+| `v`         | Mark the fingerprint as verified                 |
+| `r` / `x`   | Rename / delete a contact                        |
+| `k`         | Show your own key, change passphrase (`p`)       |
+| `?`         | Help                                             |
+| `q`         | Quit                                             |
 
-## Kommandozeile
+## Command line
 
-Für Skripte gibt es zusätzlich Unterbefehle:
+For scripts there are subcommands as well:
 
 ```sh
-hush                              # Oberfläche starten
-echo "geheim" | hush encrypt alice > nachricht.txt
-hush decrypt < nachricht.txt      # Klartext auf stdout, Absender-Prüfung auf stderr
-hush decrypt                      # ohne Eingabe: liest die Zwischenablage
-hush key                          # eigener öffentlicher Schlüssel
-hush contacts                     # Kontakte auflisten
-hush add Alice hush1…             # Kontakt hinzufügen
-hush init [--no-passphrase]       # Schlüsselpaar ohne Oberfläche erzeugen
+hush                              # start the interface
+echo "secret" | hush encrypt alice > message.txt
+hush decrypt < message.txt        # plain text on stdout, sender check on stderr
+hush decrypt                      # no input: reads the clipboard
+hush key                          # your own public key
+hush contacts                     # list contacts
+hush add Alice hush1…             # add a contact
+hush init [--no-passphrase]       # create a key pair without the interface
 ```
 
-## Sicherheit
+## Security
 
-**Verschlüsselung.** Nachrichten sind normale, ASCII-armierte [age](https://age-encryption.org)-Dateien
-(X25519, ChaCha20-Poly1305). Wer den privaten Schlüssel nicht hat, kann sie nicht lesen oder unbemerkt verändern.
+**Encryption.** Messages are regular ASCII-armored [age](https://age-encryption.org) files
+(X25519, ChaCha20-Poly1305). Without the private key nobody can read them or change them unnoticed.
 
-**Signatur.** age selbst weist den Absender nicht nach. hush signiert deshalb jede Nachricht innen mit einem
-separaten Ed25519-Schlüssel. Die Signatur deckt auch den Schlüssel des Empfängers ab – ein Empfänger kann eine
-signierte Nachricht also nicht an Dritte weiterverschlüsseln und so tun, als sei sie für diese bestimmt.
+**Signature.** age on its own does not prove who sent a message. hush therefore signs every message
+inside the encryption with a separate Ed25519 key. The signature also covers the recipient's key, so
+a recipient cannot re-encrypt a signed message to someone else and pass it off as meant for them.
 
-**Fingerprints.** Ein öffentlicher Schlüssel, der per Messenger kommt, könnte unterwegs ausgetauscht worden sein.
-Vergleicht deshalb den 64-Bit-Fingerprint einmal über einen anderen Kanal (Anruf, persönlich).
+**Fingerprints.** A public key that arrives over a messenger could have been swapped on the way.
+Compare the 64-bit fingerprint once over another channel (a call, in person).
 
-**Länge.** Nachrichten werden auf Blöcke von 128 Byte aufgefüllt, damit man an der Länge nicht ablesen kann,
-wie lang ein Passwort ist.
+**Length.** Messages are padded to blocks of 128 bytes, so their length does not reveal how long a
+password is.
 
-**Privater Schlüssel.** Er liegt nur auf deinem Gerät und wird auf Wunsch mit einer Passphrase verschlüsselt
-(age/scrypt).
+**Private key.** It stays on your device and can be encrypted with a passphrase (age/scrypt).
 
-**Zwischenablage.** Kopierter Klartext wird nach 30 Sekunden wieder gelöscht. Unter Windows wird er zusätzlich vom
-Zwischenablage-Verlauf (`Win+V`) und der Cloud-Synchronisierung ausgeschlossen. Die Oberfläche läuft im
-alternativen Bildschirm des Terminals, entschlüsselte Texte bleiben also nicht im Scroll-Verlauf stehen.
+**Clipboard.** Copied plain text is cleared again after 30 seconds. On Windows it is also kept out of
+the clipboard history (`Win+V`) and cloud sync. The interface runs in the terminal's alternate
+screen, so decrypted text does not remain in the scrollback.
 
-**Grenzen.** hush schützt nicht vor Schadsoftware auf deinem Rechner oder dem des Empfängers. Gegen
-Wiederholung einer alten Nachricht hilft nur der angezeigte Sendezeitpunkt.
+**Limits.** hush does not protect against malware on your machine or the recipient's. Against the
+replay of an old message, only the displayed send time helps.
 
-**Kompatibilität.** Unter `k` steht zusätzlich dein `age1…`-Empfänger. Damit können andere auch mit dem
-normalen `age`-CLI an dich verschlüsseln; hush zeigt solche Nachrichten als „nicht signiert“ an.
+**Compatibility.** Under `k` you will also find your `age1…` recipient. With it, others can encrypt
+to you with the regular `age` CLI; hush shows such messages as "not signed".
 
-## Daten
+## Data
 
-| System  | Ordner                                  |
+| System  | Folder                                  |
 |---------|-----------------------------------------|
 | Windows | `%AppData%\hush`                        |
 | Linux   | `~/.config/hush`                        |
 | macOS   | `~/Library/Application Support/hush`    |
 
-`identity.key` enthält deinen privaten Schlüssel – sichern, aber niemals weitergeben.
-`contacts.json` enthält deine Kontakte. Mit `HUSH_HOME` lässt sich ein anderer Ordner verwenden,
-mit `HUSH_LANG=en` bzw. `HUSH_LANG=de` die Sprache festlegen.
+`identity.key` holds your private key: back it up, but never share it. `contacts.json` holds your
+contacts. `HUSH_HOME` selects a different folder, `HUSH_LANG=en` or `HUSH_LANG=de` sets the
+language.
 
-## Entwicklung
+## Development
 
 ```sh
 go test ./...
 go run .
 ```
 
-Ein Release entsteht automatisch, sobald ein Tag gepusht wird:
+Pushing a tag creates a release automatically:
 
 ```sh
 git tag v0.1.0 && git push origin v0.1.0
 ```
 
-GitHub Actions baut dann mit [GoReleaser](https://goreleaser.com) die Programme für alle Plattformen.
+GitHub Actions then builds the binaries for all platforms with [GoReleaser](https://goreleaser.com).
 
-## Ideen für später
+After changing dependencies, regenerate the license overview (CI checks it):
 
-- Android-App mit grafischer Oberfläche (die Schlüssel sind kompatibel)
-- Mehrere Empfänger pro Nachricht
+```sh
+go run ./tools/licenses
+```
 
-## Lizenz
+## Ideas for later
 
-[MIT](LICENSE). hush nutzt [age](https://github.com/FiloSottile/age) (BSD-3-Clause) und die
-Terminal-Bibliotheken von [Charm](https://github.com/charmbracelet) (MIT).
+- Android app with a graphical interface (the keys are compatible)
+- Several recipients per message
+
+## License
+
+[MIT](LICENSE). hush uses [age](https://github.com/FiloSottile/age) (BSD-3-Clause) and the
+terminal libraries by [Charm](https://github.com/charmbracelet) (MIT). The license texts of all
+included libraries are in [docs/THIRD_PARTY_LICENSES.txt](docs/THIRD_PARTY_LICENSES.txt) and ship
+with every release.

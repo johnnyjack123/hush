@@ -3,6 +3,7 @@ package store
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,11 +13,13 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"filippo.io/age"
 	"filippo.io/age/armor"
 
 	"github.com/johnnyjack123/hush/internal/keys"
+	"github.com/johnnyjack123/hush/internal/termsafe"
 )
 
 const (
@@ -37,7 +40,35 @@ var (
 	ErrDuplicateName = errors.New("a contact with this name already exists")
 	// ErrDuplicateKey means another contact already has this public key.
 	ErrDuplicateKey = errors.New("a contact with this key already exists")
+	// ErrInvalidName means a contact name contains control characters or is too long.
+	ErrInvalidName = errors.New("contact name is invalid")
+	// ErrContactsChanged means contacts.json was modified by another hush
+	// process since it was loaded; saving would silently undo that change.
+	ErrContactsChanged = errors.New("contacts were changed by another program")
+	// ErrIdentityExists means a key pair exists already and must not be replaced.
+	ErrIdentityExists = errors.New("a key pair already exists")
+	// ErrUnsafeDir means the data directory belongs to another user.
+	ErrUnsafeDir = errors.New("data directory belongs to another user")
 )
+
+// MaxNameLength bounds contact names, in characters.
+const MaxNameLength = 64
+
+// ContactsError describes an invalid contacts.json, naming the entry at fault.
+type ContactsError struct {
+	Path string
+	Name string // empty if the file as a whole is unreadable
+	Err  error
+}
+
+func (e *ContactsError) Error() string {
+	if e.Name == "" {
+		return fmt.Sprintf("%s: %v", e.Path, e.Err)
+	}
+	return fmt.Sprintf("%s: contact %q: %v", e.Path, e.Name, e.Err)
+}
+
+func (e *ContactsError) Unwrap() error { return e.Err }
 
 // scryptWorkFactor is age's default (about one second); tests lower it.
 var scryptWorkFactor = 18
@@ -61,7 +92,13 @@ func Open() (*Store, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
 	}
-	return &Store{Dir: dir}, nil
+	s := &Store{Dir: dir}
+	// The directory may predate hush, e.g. restored from a backup or chosen
+	// with HUSH_HOME, so its permissions are not necessarily the ones above.
+	if err := secure(dir, s.path(identityFile), s.path(contactsFile)); err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 func (s *Store) path(name string) string { return filepath.Join(s.Dir, name) }
@@ -124,36 +161,52 @@ func decryptWithPassphrase(data []byte, passphrase string) ([]byte, error) {
 	return io.ReadAll(r)
 }
 
-// SaveIdentity writes the identity, encrypted with passphrase unless it is empty.
-func (s *Store) SaveIdentity(id *keys.Identity, passphrase string) error {
-	data, err := id.Marshal()
+// CreateIdentity stores a new identity like SaveIdentity, but fails with
+// ErrIdentityExists instead of replacing one, which would destroy the key
+// pair the user's contacts encrypt to.
+func (s *Store) CreateIdentity(id *keys.Identity, passphrase string) error {
+	data, err := identityData(id, passphrase)
 	if err != nil {
 		return err
 	}
-	if passphrase != "" {
-		r, err := age.NewScryptRecipient(passphrase)
-		if err != nil {
-			return err
-		}
-		r.SetWorkFactor(scryptWorkFactor)
-		var buf bytes.Buffer
-		aw := armor.NewWriter(&buf)
-		w, err := age.Encrypt(aw, r)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(data); err != nil {
-			return err
-		}
-		if err := w.Close(); err != nil {
-			return err
-		}
-		if err := aw.Close(); err != nil {
-			return err
-		}
-		data = buf.Bytes()
+	return writeFileAtomic(s.path(identityFile), data, 0o600, false)
+}
+
+// SaveIdentity writes the identity, encrypted with passphrase unless it is empty.
+func (s *Store) SaveIdentity(id *keys.Identity, passphrase string) error {
+	data, err := identityData(id, passphrase)
+	if err != nil {
+		return err
 	}
-	return writeFileAtomic(s.path(identityFile), data, 0o600)
+	return writeFileAtomic(s.path(identityFile), data, 0o600, true)
+}
+
+func identityData(id *keys.Identity, passphrase string) ([]byte, error) {
+	data, err := id.Marshal()
+	if err != nil || passphrase == "" {
+		return data, err
+	}
+	r, err := age.NewScryptRecipient(passphrase)
+	if err != nil {
+		return nil, err
+	}
+	r.SetWorkFactor(scryptWorkFactor)
+	var buf bytes.Buffer
+	aw := armor.NewWriter(&buf)
+	w, err := age.Encrypt(aw, r)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := w.Write(data); err != nil {
+		return nil, err
+	}
+	if err := w.Close(); err != nil {
+		return nil, err
+	}
+	if err := aw.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 // Contact is a person the user can send messages to.
@@ -174,6 +227,10 @@ func (c Contact) PublicKey() keys.PublicKey {
 // Book is the contact list, kept sorted by name.
 type Book struct {
 	Contacts []Contact `json:"contacts"`
+
+	// loaded identifies the file content the book was read from, so that
+	// saving can detect a concurrent change (zero if there was no file).
+	loaded [sha256.Size]byte
 }
 
 // LoadContacts reads the contact book; a missing file yields an empty book.
@@ -187,24 +244,67 @@ func (s *Store) LoadContacts() (*Book, error) {
 	}
 	var b Book
 	if err := json.Unmarshal(data, &b); err != nil {
-		return nil, fmt.Errorf("%s: %w", contactsFile, err)
+		return nil, &ContactsError{Path: s.path(contactsFile), Err: err}
 	}
+	// The file may have been edited by hand; reject what the book's methods
+	// would otherwise resolve ambiguously, such as two contacts named alike.
+	var valid Book
 	for _, c := range b.Contacts {
-		if _, err := keys.ParsePublicKey(c.Key); err != nil {
-			return nil, fmt.Errorf("%s: contact %q: %w", contactsFile, c.Name, err)
+		err := checkName(c.Name)
+		if err == nil {
+			_, err = keys.ParsePublicKey(c.Key)
 		}
+		if err == nil && valid.Index(c.Name) >= 0 {
+			err = ErrDuplicateName
+		}
+		if err == nil && valid.ByKey(c.PublicKey()) != nil {
+			err = ErrDuplicateKey
+		}
+		if err != nil {
+			return nil, &ContactsError{Path: s.path(contactsFile), Name: c.Name, Err: err}
+		}
+		valid.Contacts = append(valid.Contacts, c)
 	}
 	b.sort()
+	b.loaded = sha256.Sum256(data)
 	return &b, nil
 }
 
-// SaveContacts writes the contact book.
+// SaveContacts writes the contact book. It fails with ErrContactsChanged if
+// the file changed since b was loaded.
 func (s *Store) SaveContacts(b *Book) error {
+	var current [sha256.Size]byte
+	if data, err := os.ReadFile(s.path(contactsFile)); err == nil {
+		current = sha256.Sum256(data)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if current != b.loaded {
+		return ErrContactsChanged
+	}
 	data, err := json.MarshalIndent(b, "", "  ")
 	if err != nil {
 		return err
 	}
-	return writeFileAtomic(s.path(contactsFile), append(data, '\n'), 0o600)
+	data = append(data, '\n')
+	if err := writeFileAtomic(s.path(contactsFile), data, 0o600, true); err != nil {
+		return err
+	}
+	b.loaded = sha256.Sum256(data)
+	return nil
+}
+
+// checkName validates a trimmed contact name. Names are shown on the
+// terminal, so control and bidi characters, which could fake parts of the
+// interface, are not allowed.
+func checkName(name string) error {
+	switch {
+	case name == "":
+		return ErrEmptyName
+	case !termsafe.IsClean(name), utf8.RuneCountInString(name) > MaxNameLength:
+		return ErrInvalidName
+	}
+	return nil
 }
 
 func (b *Book) sort() {
@@ -236,8 +336,8 @@ func (b *Book) ByKey(pk keys.PublicKey) *Contact {
 // Add inserts a contact and returns its index in the sorted list.
 func (b *Book) Add(name string, pk keys.PublicKey) (int, error) {
 	name = strings.TrimSpace(name)
-	if name == "" {
-		return -1, ErrEmptyName
+	if err := checkName(name); err != nil {
+		return -1, err
 	}
 	if b.Index(name) >= 0 {
 		return -1, ErrDuplicateName
@@ -253,8 +353,8 @@ func (b *Book) Add(name string, pk keys.PublicKey) (int, error) {
 // Rename changes the name of the contact at i and returns its new index.
 func (b *Book) Rename(i int, name string) (int, error) {
 	name = strings.TrimSpace(name)
-	if name == "" {
-		return i, ErrEmptyName
+	if err := checkName(name); err != nil {
+		return i, err
 	}
 	if j := b.Index(name); j >= 0 && j != i {
 		return i, ErrDuplicateName
@@ -269,8 +369,10 @@ func (b *Book) Remove(i int) {
 	b.Contacts = append(b.Contacts[:i], b.Contacts[i+1:]...)
 }
 
-// writeFileAtomic replaces path in one step so a crash never leaves a half-written key file.
-func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
+// writeFileAtomic replaces path in one step so a crash never leaves a
+// half-written key file. Without overwrite it fails with ErrIdentityExists if
+// path exists; the check sits right before the rename to keep the window small.
+func writeFileAtomic(path string, data []byte, perm os.FileMode, overwrite bool) error {
 	tmp, err := os.CreateTemp(filepath.Dir(path), ".tmp-*")
 	if err != nil {
 		return err
@@ -289,6 +391,11 @@ func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
 	}
 	if err := os.Chmod(tmp.Name(), perm); err != nil {
 		return err
+	}
+	if !overwrite {
+		if _, err := os.Lstat(path); err == nil {
+			return ErrIdentityExists
+		}
 	}
 	return os.Rename(tmp.Name(), path)
 }

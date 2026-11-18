@@ -294,16 +294,18 @@ func replace(ctx context.Context, bin []byte, version string) error {
 		return err
 	}
 	dir := filepath.Dir(exe)
-	pattern := ".hush-update-*"
-	if runtime.GOOS == "windows" {
-		pattern += ".exe"
-	}
-	tmp, err := os.CreateTemp(dir, pattern)
+	tmp, err := os.CreateTemp(dir, tempPattern())
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrNotWritable, err)
 	}
 	defer os.Remove(tmp.Name())
 	if _, err := tmp.Write(bin); err != nil {
+		tmp.Close()
+		return err
+	}
+	// Without this, a power loss right after the rename can leave an empty
+	// binary on file systems that do not order the two.
+	if err := tmp.Sync(); err != nil {
 		tmp.Close()
 		return err
 	}
@@ -326,8 +328,12 @@ func swap(newPath, exe string) error {
 	if runtime.GOOS != "windows" {
 		return os.Rename(newPath, exe)
 	}
-	old := exe + ".old"
-	_ = os.Remove(old)
+	// A binary replaced earlier may still be running, e.g. in another
+	// window, and then cannot be removed; a fresh name avoids it.
+	old := exe + replacedSuffix
+	if err := os.Remove(old); err != nil && !os.IsNotExist(err) {
+		old = fmt.Sprintf("%s%s-%d", exe, replacedSuffix, time.Now().UnixNano())
+	}
 	if err := os.Rename(exe, old); err != nil {
 		return fmt.Errorf("%w: %v", ErrNotWritable, err)
 	}
@@ -338,15 +344,36 @@ func swap(newPath, exe string) error {
 	return nil
 }
 
-// Cleanup removes the binary a previous update on Windows left behind.
+// replacedSuffix marks binaries moved aside by an update. It is specific
+// to hush so that Cleanup never deletes, say, a backup the user named
+// hush.exe.old.
+const replacedSuffix = ".replaced-by-hush"
+
+// tempPattern names the downloaded binary. Windows treats programs whose
+// name contains words like "update", "setup", "install" or "patch" as
+// installers that need administrator rights, which made the self-test fail.
+func tempPattern() string {
+	if runtime.GOOS == "windows" {
+		return ".hush-next-*.exe"
+	}
+	return ".hush-next-*"
+}
+
+// Cleanup removes binaries a previous update on Windows moved aside.
 func Cleanup() {
 	if runtime.GOOS != "windows" {
 		return
 	}
-	if exe, err := executable(); err == nil {
-		if exe, err = filepath.EvalSymlinks(exe); err == nil {
-			_ = os.Remove(exe + ".old")
-		}
+	exe, err := executable()
+	if err != nil {
+		return
+	}
+	if exe, err = filepath.EvalSymlinks(exe); err != nil {
+		return
+	}
+	matches, _ := filepath.Glob(exe + replacedSuffix + "*")
+	for _, m := range matches {
+		_ = os.Remove(m)
 	}
 }
 
@@ -362,7 +389,9 @@ func get(ctx context.Context, url string, limit int64) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%s: %s", url, resp.Status)
+		// Only the code: the status text and the URL come from the server and
+		// end up on the terminal.
+		return nil, fmt.Errorf("download failed: HTTP %d", resp.StatusCode)
 	}
 	return readLimited(resp.Body, limit)
 }

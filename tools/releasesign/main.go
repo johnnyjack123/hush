@@ -1,11 +1,11 @@
 // Command releasesign signs a release's checksums.txt for hush's updater.
 //
-//	releasesign -keygen 2>public.txt | gh secret set HUSH_RELEASE_KEY --env release
+//	releasesign -keygen                          new key pair (needs gh)
 //	HUSH_RELEASE_KEY=… releasesign dist/checksums.txt
 //
-// The private key is a base64-encoded Ed25519 seed. -keygen refuses to write
-// it to a terminal, so that it only ever goes into a pipe; the public key
-// goes to stderr as hex, for internal/update/key.go.
+// The private key is a base64-encoded Ed25519 seed. -keygen hands it
+// straight to "gh secret set" for the repository's release environment and
+// prints only the public key, as hex for internal/update/key.go.
 package main
 
 import (
@@ -17,14 +17,14 @@ import (
 	"flag"
 	"fmt"
 	"os"
-
-	"golang.org/x/term"
+	"os/exec"
+	"strings"
 
 	"github.com/johnnyjack123/hush/internal/update"
 )
 
 func main() {
-	keygen := flag.Bool("keygen", false, "create a key pair: private key to stdout, public key to stderr")
+	keygen := flag.Bool("keygen", false, "create a key pair, store the private key as GitHub secret, print the public key")
 	flag.Parse()
 	var err error
 	if *keygen {
@@ -38,18 +38,21 @@ func main() {
 	}
 }
 
+// generate never writes the private key to stdout: a terminal cannot always
+// be told apart from a pipe (Git Bash's mintty is a pipe), and a key shown
+// once stays in the scrollback.
 func generate() error {
-	if term.IsTerminal(int(os.Stdout.Fd())) {
-		return errors.New("refusing to print the private key to a terminal; pipe it into gh secret set")
-	}
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		return err
 	}
-	if _, err := fmt.Print(base64.StdEncoding.EncodeToString(priv.Seed())); err != nil {
-		return err
+	cmd := exec.Command("gh", "secret", "set", "HUSH_RELEASE_KEY", "--env", "release")
+	cmd.Stdin = strings.NewReader(base64.StdEncoding.EncodeToString(priv.Seed()))
+	cmd.Stdout, cmd.Stderr = os.Stderr, os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("gh secret set: %w", err)
 	}
-	_, err = fmt.Fprintln(os.Stderr, hex.EncodeToString(pub))
+	_, err = fmt.Println(hex.EncodeToString(pub))
 	return err
 }
 

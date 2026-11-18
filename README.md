@@ -169,8 +169,8 @@ git tag v0.1.0 && git push origin v0.1.0
 
 GitHub Actions then builds the binaries for all platforms with [GoReleaser](https://goreleaser.com),
 signs `checksums.txt` with the `HUSH_RELEASE_KEY` secret of the `release` environment and publishes
-the release. `go run ./tools/releasesign -keygen` creates a new key pair; its public key goes into
-`internal/update/key.go`.
+the release. `go run ./tools/releasesign -keygen` creates a new key pair, stores the private key as
+that secret via `gh` and prints the public key for `internal/update/key.go`.
 
 After changing dependencies, regenerate the license overview (CI checks it):
 

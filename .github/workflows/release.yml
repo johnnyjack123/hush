@@ -2,36 +2,62 @@ name: release
 
 on:
   push:
-    tags: ["v*"]
+    # Stable versions only: the updater accepts nothing but x.y.z, and a
+    # pre-release published as latest would break "hush update" for everyone.
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  goreleaser:
+  build:
     runs-on: ubuntu-latest
-    # The signing key is a secret of this environment, which only accepts
-    # runs for tags matching v*.
-    environment: release
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version-file: go.mod
       - run: go run ./tools/licenses -check
-      - uses: goreleaser/goreleaser-action@v6
+      # Creates a draft release; the sign job publishes it.
+      - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
         with:
-          version: "~> v2"
+          version: v2.20.2
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Sign checksums and publish
+
+  # Signing has its own job so that the key never shares a machine with
+  # GoReleaser or other third-party code. The release environment only
+  # accepts runs for v* tags.
+  sign:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+    env:
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Download checksums of the draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release download "$GITHUB_REF_NAME" --pattern checksums.txt --dir dist
+      - name: Sign
         env:
           HUSH_RELEASE_KEY: ${{ secrets.HUSH_RELEASE_KEY }}
+        run: go run ./tools/releasesign dist/checksums.txt
+      - name: Publish
+        env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          go run ./tools/releasesign dist/checksums.txt
-          gh release upload "$GITHUB_REF_NAME" dist/checksums.txt.sig
+          gh release upload "$GITHUB_REF_NAME" dist/checksums.txt.sig --clobber
           gh release edit "$GITHUB_REF_NAME" --draft=false --latest

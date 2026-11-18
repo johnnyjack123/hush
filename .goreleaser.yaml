@@ -32,6 +32,9 @@ checksum:
 # "hush update" never sees a release without its signature.
 release:
   draft: true
+  # A re-run must not leave a second draft whose checksums differ from the
+  # ones the sign job signs.
+  replace_existing_draft: true
 
 changelog:
   sort: asc

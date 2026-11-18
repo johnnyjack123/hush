@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -155,8 +156,30 @@ func TestInstall(t *testing.T) {
 		t.Fatalf("installed %q", got)
 	}
 	Cleanup()
-	if _, err := os.Stat(f.exe + ".old"); !os.IsNotExist(err) {
-		t.Fatalf("old binary left behind: %v", err)
+	if left, _ := filepath.Glob(f.exe + replacedSuffix + "*"); len(left) != 0 {
+		t.Fatalf("old binary left behind: %v", left)
+	}
+}
+
+func TestCleanupKeepsUserFiles(t *testing.T) {
+	newFakeRelease(t, "9.9.9")
+	exe, _ := executable()
+	backup := exe + ".old"
+	os.WriteFile(backup, []byte("user backup"), 0o644)
+	Cleanup()
+	if _, err := os.Stat(backup); err != nil {
+		t.Fatalf("Cleanup removed a file hush did not create: %v", err)
+	}
+}
+
+// Windows asks for administrator rights before running anything whose name
+// looks like an installer, which broke the self-test of every update.
+func TestTempNameDoesNotLookLikeAnInstaller(t *testing.T) {
+	name := strings.ToLower(tempPattern())
+	for _, word := range []string{"update", "setup", "install", "patch", "upgrade"} {
+		if strings.Contains(name, word) {
+			t.Errorf("temporary binary name %q contains %q", name, word)
+		}
 	}
 }
 

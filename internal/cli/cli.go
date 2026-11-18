@@ -70,7 +70,8 @@ func Run(args []string, version string) int {
 	}
 	if err != nil {
 		if !errors.Is(err, errUsage) {
-			fmt.Fprintln(os.Stderr, "hush: "+i18n.Err(err))
+			// Errors can carry text from outside, such as a server's reply.
+			fmt.Fprintln(os.Stderr, "hush: "+termsafe.Text(i18n.Err(err)))
 		}
 		return 1
 	}

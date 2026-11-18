@@ -168,8 +168,8 @@ git tag v0.1.0 && git push origin v0.1.0
 
 GitHub Actions baut dann mit [GoReleaser](https://goreleaser.com) die Programme für alle Plattformen,
 signiert `checksums.txt` mit dem Secret `HUSH_RELEASE_KEY` der Umgebung `release` und veröffentlicht das Release.
-`go run ./tools/releasesign -keygen` erzeugt ein neues Schlüsselpaar; der öffentliche Schlüssel gehört nach
-`internal/update/key.go`.
+`go run ./tools/releasesign -keygen` erzeugt ein neues Schlüsselpaar, legt den privaten Schlüssel per `gh` als dieses
+Secret ab und gibt den öffentlichen für `internal/update/key.go` aus.
 
 Nach einer Änderung an den Abhängigkeiten muss die Lizenzübersicht neu erzeugt werden (die CI prüft das):
 

@@ -174,6 +174,8 @@ Usage:
   hush contacts                 List contacts
   hush add <name> <key>         Add a contact
   hush init [--no-passphrase]   Create your key pair
+  hush remember                 Unlock without the passphrase on this device
+  hush forget                   Ask for the passphrase on this device again
   hush version                  Show the version
 
 Data:     %s (override with HUSH_HOME)
@@ -209,4 +211,22 @@ Language: HUSH_LANG=en or HUSH_LANG=de
 	"err.contacts_file":    "%s is invalid: %s",
 	"cli.multiline":        "Please pipe multi-line or very long text (e.g. hush encrypt Alice < file.txt) or use the interface.",
 	"cli.usage_decrypt":    "Usage: hush decrypt < message.txt  (without input, the clipboard is read)",
+
+	"busy.keyring":                "Asking the system keyring …",
+	"status.unlocked_device":      "Unlocked via the system keyring.",
+	"status.remembered":           "Remembered – hush will start on this device without the passphrase.",
+	"status.forgotten":            "Forgotten – hush will ask for the passphrase on this device again.",
+	"status.remember_unprotected": "Without a passphrase there is nothing to remember.",
+	"unlock.device_failed":        "Automatic unlock failed: %s",
+	"unlock.tip":                  "Tip: under “My key” (k), hush can remember this device.",
+	"mykey.device":                "This device",
+	"mykey.device_remembered":     "unlocks without passphrase",
+	"mykey.device_not_remembered": "asks for the passphrase",
+	"key.remember":                "remember this device",
+	"key.forget":                  "forget this device",
+	"err.no_keyring":              "The system keyring is not available. On Linux, GNOME Keyring or KWallet is needed, for example.",
+	"err.device_key_missing":      "The entry in the system keyring is missing. Unlock with the passphrase and remember the device again.",
+	"err.device_stale":            "The remembered copy no longer matches identity.key. Unlock with the passphrase and remember the device again.",
+	"cli.usage_remember":          "Usage: hush remember",
+	"cli.usage_forget":            "Usage: hush forget",
 }

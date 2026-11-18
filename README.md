@@ -64,7 +64,7 @@ go install github.com/johnnyjack123/hush@latest
 | `a`         | Add a contact                                    |
 | `v`         | Mark the fingerprint as verified                 |
 | `r` / `x`   | Rename / delete a contact                        |
-| `k`         | Show your own key, change passphrase (`p`)       |
+| `k`         | Your key: passphrase (`p`), remember device (`m`) |
 | `?`         | Help                                             |
 | `q`         | Quit                                             |
 
@@ -81,6 +81,8 @@ hush key                          # your own public key
 hush contacts                     # list contacts
 hush add Alice hush1…             # add a contact
 hush init [--no-passphrase]       # create a key pair without the interface
+hush remember                     # unlock without the passphrase on this device
+hush forget                       # ask for the passphrase on this device again
 ```
 
 In a terminal, `hush decrypt` shows the text indented and with control characters made visible, so
@@ -103,6 +105,14 @@ Compare the 96-bit fingerprints once, in full, over another channel (a call, in 
 password is.
 
 **Private key.** It stays on your device and can be encrypted with a passphrase (age/scrypt).
+
+**Remember this device.** Typing the passphrase at every start can be skipped: under `k`, press `m`.
+hush then keeps a second copy of your private key, encrypted with a random key that it hands to
+the system keyring: Windows Credential Manager, the macOS Keychain, or GNOME Keyring/KWallet on
+Linux. The keyring opens when you log in, so hush starts without asking. `identity.key` and its
+backups stay protected by the passphrase alone, and the copy is useless without your system login
+on this device. The trade-off: anyone who can use your unlocked user account can open hush, so
+lock the screen when you step away. Pressing `m` again, or `hush forget`, removes the copy.
 
 **Clipboard.** Copied plain text is cleared again after 30 seconds. On Windows it is also kept out of
 the clipboard history (`Win+V`) and cloud sync; on Linux and macOS, clipboard managers such as

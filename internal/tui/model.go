@@ -92,6 +92,7 @@ type readyKind int
 const (
 	readyCreated readyKind = iota
 	readyUnlocked
+	readyUnlockedDevice
 	readyPassphraseChanged
 )
 
@@ -106,6 +107,8 @@ type (
 	}
 	statusExpiredMsg    struct{ id int }
 	clipboardExpiredMsg struct{ id int }
+	// deviceMsg reports the result of remembering or forgetting this device.
+	deviceMsg struct{ err error }
 )
 
 // Model is the Bubble Tea model for the whole application.
@@ -118,6 +121,8 @@ type Model struct {
 	id     *keys.Identity
 	book   *store.Book
 	locked bool
+	// remembered means the system keyring can unlock the identity here.
+	remembered bool
 
 	screen        screen
 	mode          mode
@@ -187,9 +192,14 @@ func New(s *store.Store) (Model, error) {
 	if m.locked, err = s.IdentityLocked(); err != nil {
 		return m, err
 	}
+	m.remembered = s.Remembered()
 	if m.locked {
 		m.screen = screenUnlock
 		m.focusPass(0)
+		if m.remembered {
+			// Init asks the keyring; the passphrase field is the fallback.
+			m.busy = T("busy.keyring")
+		}
 		return m, nil
 	}
 	if m.id, err = s.LoadIdentity(""); err != nil {
@@ -244,7 +254,16 @@ func newInput(placeholder string, secret bool) textinput.Model {
 	return ti
 }
 
-func (m Model) Init() tea.Cmd { return nil }
+func (m Model) Init() tea.Cmd {
+	if m.screen != screenUnlock || !m.remembered {
+		return nil
+	}
+	s := m.store
+	return tea.Batch(m.spinner.Tick, func() tea.Msg {
+		id, err := s.LoadRemembered()
+		return identityMsg{kind: readyUnlockedDevice, id: id, locked: true, err: err}
+	})
+}
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmd := m.update(msg)
@@ -285,6 +304,17 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		return nil
 	case identityMsg:
 		return m.identityReady(msg)
+	case deviceMsg:
+		m.busy = ""
+		m.remembered = m.store.Remembered()
+		m.refreshContent()
+		switch {
+		case msg.err != nil:
+			return m.setStatus(statusErr, i18n.Err(msg.err))
+		case m.remembered:
+			return m.setStatus(statusOK, T("status.remembered"))
+		}
+		return m.setStatus(statusOK, T("status.forgotten"))
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
 			return tea.Quit
@@ -395,6 +425,8 @@ func (m *Model) identityReady(msg identityMsg) tea.Cmd {
 		switch msg.kind {
 		case readyUnlocked:
 			m.pass.Reset()
+		case readyUnlockedDevice:
+			m.formErr = T("unlock.device_failed", i18n.Err(msg.err))
 		case readyPassphraseChanged:
 			m.old.Reset()
 			return m.focusPass(0)
@@ -406,6 +438,7 @@ func (m *Model) identityReady(msg identityMsg) tea.Cmd {
 	m.pass2.Reset()
 	m.id = msg.id
 	m.locked = msg.locked
+	m.remembered = m.store.Remembered()
 	m.screen = screenMain
 
 	switch msg.kind {
@@ -420,6 +453,9 @@ func (m *Model) identityReady(msg identityMsg) tea.Cmd {
 		return m.setStatus(statusWarn, T("status.passphrase_removed"))
 	}
 	m.setMode(modeBrowse)
+	if msg.kind == readyUnlockedDevice {
+		return m.setStatus(statusOK, T("status.unlocked_device"))
+	}
 	return nil
 }
 
@@ -485,6 +521,8 @@ func (m *Model) updateMain(msg tea.KeyMsg) tea.Cmd {
 		case "p":
 			m.setMode(modePassphrase)
 			return m.focusPass(0)
+		case "m":
+			return m.toggleDevice()
 		}
 
 	case modeAdd:
@@ -629,6 +667,21 @@ func (m *Model) updateConfirm(msg tea.KeyMsg) tea.Cmd {
 	}
 	c.Verified = true
 	return m.saveContacts(statusOK, T("status.verified", name))
+}
+
+// toggleDevice remembers or forgets this device in the system keyring. It
+// runs in the background because the system may ask to unlock the keyring.
+func (m *Model) toggleDevice() tea.Cmd {
+	if !m.locked {
+		return m.setStatus(statusInfo, T("status.remember_unprotected"))
+	}
+	s, id, forget := m.store, m.id, m.remembered
+	return m.startBusy(T("busy.keyring"), func() tea.Msg {
+		if forget {
+			return deviceMsg{err: s.Forget()}
+		}
+		return deviceMsg{err: s.Remember(id)}
+	})
 }
 
 func (m *Model) savePassphrase() tea.Cmd {

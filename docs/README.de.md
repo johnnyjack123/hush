@@ -62,7 +62,7 @@ go install github.com/johnnyjack123/hush@latest
 | `a`         | Kontakt hinzufügen                                  |
 | `v`         | Fingerprint als verifiziert markieren               |
 | `r` / `x`   | Kontakt umbenennen / löschen                        |
-| `k`         | Eigenen Schlüssel anzeigen, Passphrase ändern (`p`) |
+| `k`         | Eigener Schlüssel: Passphrase (`p`), Gerät merken (`m`) |
 | `?`         | Hilfe                                               |
 | `q`         | Beenden                                             |
 
@@ -79,6 +79,8 @@ hush key                          # eigener öffentlicher Schlüssel
 hush contacts                     # Kontakte auflisten
 hush add Alice hush1…             # Kontakt hinzufügen
 hush init [--no-passphrase]       # Schlüsselpaar ohne Oberfläche erzeugen
+hush remember                     # auf diesem Gerät ohne Passphrase entsperren
+hush forget                       # auf diesem Gerät wieder nach der Passphrase fragen
 ```
 
 Im Terminal zeigt `hush decrypt` den Text eingerückt und mit sichtbar gemachten Steuerzeichen an, damit eine
@@ -102,6 +104,14 @@ wie lang ein Passwort ist.
 
 **Privater Schlüssel.** Er liegt nur auf deinem Gerät und wird auf Wunsch mit einer Passphrase verschlüsselt
 (age/scrypt).
+
+**Auf diesem Gerät merken.** Die Passphrase muss nicht bei jedem Start eingegeben werden: Unter `k` die Taste `m`
+drücken. hush legt dann eine zweite Kopie deines privaten Schlüssels an, verschlüsselt mit einem Zufallsschlüssel,
+den es dem Schlüsselspeicher des Systems übergibt: der Windows-Anmeldeinformationsverwaltung, dem macOS-Schlüsselbund
+oder GNOME Keyring/KWallet unter Linux. Der Schlüsselspeicher öffnet sich beim Anmelden, hush startet also ohne
+Nachfrage. `identity.key` und seine Backups bleiben allein durch die Passphrase geschützt, und die Kopie ist ohne
+deine Anmeldung an diesem Gerät nutzlos. Der Preis: Wer dein entsperrtes Benutzerkonto benutzen kann, kann auch
+hush öffnen – sperre also den Bildschirm, wenn du weggehst. Erneut `m` oder `hush forget` entfernt die Kopie.
 
 **Zwischenablage.** Kopierter Klartext wird nach 30 Sekunden wieder gelöscht. Unter Windows wird er zusätzlich vom
 Zwischenablage-Verlauf (`Win+V`) und der Cloud-Synchronisierung ausgeschlossen; unter Linux und macOS können

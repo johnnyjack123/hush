@@ -174,6 +174,8 @@ Verwendung:
   hush contacts                 Kontakte auflisten
   hush add <name> <schlüssel>   Kontakt hinzufügen
   hush init [--no-passphrase]   Schlüsselpaar erzeugen
+  hush remember                 Auf diesem Gerät ohne Passphrase entsperren
+  hush forget                   Auf diesem Gerät wieder nach der Passphrase fragen
   hush version                  Version anzeigen
 
 Daten:   %s (änderbar über HUSH_HOME)
@@ -209,4 +211,22 @@ Sprache: HUSH_LANG=de oder HUSH_LANG=en
 	"err.contacts_file":    "%s ist ungültig: %s",
 	"cli.multiline":        "Mehrzeilige oder sehr lange Texte bitte per Pipe übergeben (z.\u00a0B. hush encrypt Alice < datei.txt) oder die Oberfläche nutzen.",
 	"cli.usage_decrypt":    "Verwendung: hush decrypt < nachricht.txt  (ohne Eingabe wird die Zwischenablage gelesen)",
+
+	"busy.keyring":                "Frage den Schlüsselspeicher des Systems …",
+	"status.unlocked_device":      "Über den Schlüsselspeicher des Systems entsperrt.",
+	"status.remembered":           "Gemerkt – hush startet auf diesem Gerät künftig ohne Passphrase.",
+	"status.forgotten":            "Vergessen – hush fragt auf diesem Gerät wieder nach der Passphrase.",
+	"status.remember_unprotected": "Ohne Passphrase gibt es nichts zu merken.",
+	"unlock.device_failed":        "Automatisches Entsperren fehlgeschlagen: %s",
+	"unlock.tip":                  "Tipp: Unter „Mein Schlüssel“ (k) kann sich hush dieses Gerät merken.",
+	"mykey.device":                "Dieses Gerät",
+	"mykey.device_remembered":     "entsperrt ohne Passphrase",
+	"mykey.device_not_remembered": "fragt nach der Passphrase",
+	"key.remember":                "auf diesem Gerät merken",
+	"key.forget":                  "Gerät vergessen",
+	"err.no_keyring":              "Der Schlüsselspeicher des Systems ist nicht verfügbar. Unter Linux wird z. B. GNOME Keyring oder KWallet benötigt.",
+	"err.device_key_missing":      "Der Eintrag im Schlüsselspeicher fehlt. Entsperre mit der Passphrase und lass dir das Gerät neu merken.",
+	"err.device_stale":            "Die gemerkte Kopie passt nicht mehr zu identity.key. Entsperre mit der Passphrase und lass dir das Gerät neu merken.",
+	"cli.usage_remember":          "Verwendung: hush remember",
+	"cli.usage_forget":            "Verwendung: hush forget",
 }

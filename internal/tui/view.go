@@ -269,20 +269,41 @@ func (m *Model) myKeyContent(w int) string {
 	if m.locked {
 		protection = sOK.Render("✓ " + T("mykey.protected"))
 	}
-	return strings.Join([]string{
+	lines := []string{
 		T("mykey.intro"),
 		"",
 		sAccent.Bold(true).Render(hardWrap(pk.String(), w)),
 		"",
 		row(T("contact.fingerprint"), labelWidth, sAccent.Bold(true).Render(pk.Fingerprint().String())),
 		row(T("mykey.passphrase"), labelWidth, protection),
+	}
+	if m.locked {
+		device := sDim.Render(T("mykey.device_not_remembered"))
+		if m.remembered {
+			device = sOK.Render("✓ " + T("mykey.device_remembered"))
+		}
+		lines = append(lines, row(T("mykey.device"), labelWidth, device))
+	}
+	lines = append(lines,
 		row(T("mykey.location"), labelWidth, sDim.Render(m.store.Dir)),
 		"",
 		sDim.Render(T("mykey.age_hint")),
 		sDim.Render(hardWrap(pk.AgeRecipient(), w)),
 		"",
-		keyHelp("c", T("key.copy_key"), "p", T("key.passphrase")),
-	}, "\n")
+		keyHelp(m.myKeyActions()...),
+	)
+	return strings.Join(lines, "\n")
+}
+
+func (m Model) myKeyActions() []string {
+	pairs := []string{"c", T("key.copy_key"), "p", T("key.passphrase")}
+	switch {
+	case m.locked && m.remembered:
+		pairs = append(pairs, "m", T("key.forget"))
+	case m.locked:
+		pairs = append(pairs, "m", T("key.remember"))
+	}
+	return pairs
 }
 
 func helpContent(w int) string {
@@ -323,6 +344,9 @@ func (m Model) viewStatus() string {
 		}
 		return ansi.Truncate(" "+sWarn.Bold(true).Render(q)+"  "+keyHelp(T("key.yes_key"), T("key.yes"), "n", T("key.no")), m.width, "…")
 	}
+	if m.busy != "" && m.screen == screenMain && m.mode != modePassphrase {
+		return ansi.Truncate(" "+m.spinner.View()+" "+m.busy, m.width, "…")
+	}
 	if m.status == "" {
 		return ""
 	}
@@ -352,7 +376,7 @@ func (m Model) viewHelp() string {
 		case modeOpened:
 			pairs = []string{"c", T("key.copy_secret"), "↑↓", T("key.scroll"), "esc", T("key.back")}
 		case modeMyKey:
-			pairs = []string{"c", T("key.copy_key"), "p", T("key.passphrase"), "esc", T("key.back")}
+			pairs = append(m.myKeyActions(), "esc", T("key.back"))
 		case modeAdd, modePassphrase:
 			pairs = []string{"tab", T("key.next_field"), "enter", T("key.save"), "esc", T("key.cancel")}
 		case modeRename:
@@ -381,6 +405,8 @@ func (m Model) viewUnlock() string {
 	lines := []string{T("unlock.intro"), "", field(T("unlock.passphrase"), m.pass.View(), true)}
 	if m.busy != "" {
 		lines = append(lines, "", m.spinner.View()+" "+m.busy)
+	} else if !m.remembered {
+		lines = append(lines, "", sDim.Render(T("unlock.tip")))
 	}
 	body := strings.Join(lines, "\n") + m.viewFormErr()
 	return m.centered(box(T("unlock.title"), body, w, lipgloss.Height(lipgloss.NewStyle().Width(w-4).Render(body))+2, true))

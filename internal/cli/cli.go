@@ -49,6 +49,10 @@ func Run(args []string, version string) int {
 		err = cmdAdd(args)
 	case "init":
 		err = cmdInit(args)
+	case "remember":
+		err = cmdRemember(args)
+	case "forget":
+		err = cmdForget(args)
 	case "version", "--version", "-v":
 		fmt.Println("hush", version)
 	case "help", "--help", "-h":
@@ -100,13 +104,62 @@ func loadIdentity(s *store.Store) (*keys.Identity, error) {
 	if err != nil {
 		return nil, err
 	}
-	passphrase := ""
-	if locked {
-		if passphrase, err = readSecret(T("cli.passphrase")); err != nil {
-			return nil, err
+	if !locked {
+		return s.LoadIdentity("")
+	}
+	if s.Remembered() {
+		id, err := s.LoadRemembered()
+		if err == nil {
+			return id, nil
 		}
+		fmt.Fprintln(os.Stderr, "⚠ "+T("unlock.device_failed", i18n.Err(err)))
+	}
+	passphrase, err := readSecret(T("cli.passphrase"))
+	if err != nil {
+		return nil, err
 	}
 	return s.LoadIdentity(passphrase)
+}
+
+func cmdRemember(args []string) error {
+	if len(args) > 0 {
+		return usageError("cli.usage_remember")
+	}
+	s, err := store.Open()
+	if err != nil {
+		return err
+	}
+	locked, err := s.IdentityLocked()
+	if err != nil {
+		return err
+	}
+	if !locked {
+		return errors.New(T("status.remember_unprotected"))
+	}
+	id, err := loadIdentity(s)
+	if err != nil {
+		return err
+	}
+	if err := s.Remember(id); err != nil {
+		return err
+	}
+	fmt.Fprintln(os.Stderr, T("status.remembered"))
+	return nil
+}
+
+func cmdForget(args []string) error {
+	if len(args) > 0 {
+		return usageError("cli.usage_forget")
+	}
+	s, err := store.Open()
+	if err != nil {
+		return err
+	}
+	if err := s.Forget(); err != nil {
+		return err
+	}
+	fmt.Fprintln(os.Stderr, T("status.forgotten"))
+	return nil
 }
 
 func cmdEncrypt(args []string) error {

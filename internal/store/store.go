@@ -169,7 +169,12 @@ func (s *Store) CreateIdentity(id *keys.Identity, passphrase string) error {
 	if err != nil {
 		return err
 	}
-	return writeFileAtomic(s.path(identityFile), data, 0o600, false)
+	if err := writeFileAtomic(s.path(identityFile), data, 0o600, false); err != nil {
+		return err
+	}
+	// A remembered copy left over from a deleted identity must not unlock
+	// anything in place of the new one.
+	return s.Forget()
 }
 
 // SaveIdentity writes the identity, encrypted with passphrase unless it is empty.
@@ -178,7 +183,15 @@ func (s *Store) SaveIdentity(id *keys.Identity, passphrase string) error {
 	if err != nil {
 		return err
 	}
-	return writeFileAtomic(s.path(identityFile), data, 0o600, true)
+	if err := writeFileAtomic(s.path(identityFile), data, 0o600, true); err != nil {
+		return err
+	}
+	if passphrase == "" {
+		// Nothing left to remember, and the copy would only be a second
+		// place the key could leak from.
+		return s.Forget()
+	}
+	return s.rebindDevice()
 }
 
 func identityData(id *keys.Identity, passphrase string) ([]byte, error) {

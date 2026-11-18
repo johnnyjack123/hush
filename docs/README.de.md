@@ -9,7 +9,7 @@ hush ist ein kleines Terminal-Programm mit komfortabler Tastatur-Oberfläche. Es
 Nachricht, damit der Empfänger weiß, dass sie wirklich von dir kommt.
 
 ```
- hush   Texte sicher verschlüsseln                                          Du 7F3A-91C2
+ hush   Texte sicher verschlüsseln
 ╭─ Kontakte ─────────────────────╮╭─ Nachricht an Alice ───────────────────────────────╮
 │ ▸ Alice            ✓ 7F3A-91C2 ││ Wird für Alice verschlüsselt und von dir signiert. │
 │   Bob                C04E-1B77 ││                                                    │
@@ -29,8 +29,8 @@ Nachricht, damit der Empfänger weiß, dass sie wirklich von dir kommt.
 1. **Alice** startet hush. Beim ersten Start wird ihr Schlüsselpaar erzeugt (optional mit Passphrase).
 2. Sie drückt `k`, kopiert ihren **öffentlichen Schlüssel** (`hush1…`) und schickt ihn dir.
 3. Du kopierst den Schlüssel und drückst `a` – hush übernimmt ihn aus der Zwischenablage. Name eingeben, fertig.
-4. Ihr vergleicht einmal eure **Fingerprints** (z. B. `7F3A-91C2-04BE-1D77`) über einen zweiten Kanal,
-   etwa per Anruf. Stimmen sie, markierst du Alice mit `v` als verifiziert.
+4. Ihr vergleicht einmal beide **Fingerprints** vollständig (z. B. `7F3A-91C2-04BE-1D77-A0C3-5E19`) über einen zweiten Kanal,
+   etwa per Anruf – hush zeigt beide auf Alices Kontaktseite. Stimmen sie, markierst du Alice mit `v` als verifiziert.
 5. Kontakt wählen, `e` drücken, Passwort eingeben, `Strg+S`. Die verschlüsselte Nachricht liegt
    jetzt in der Zwischenablage – einfach in Telegram einfügen.
 6. Alice kopiert die Nachricht und drückt in hush `d`. hush erkennt die Nachricht in der
@@ -81,6 +81,10 @@ hush add Alice hush1…             # Kontakt hinzufügen
 hush init [--no-passphrase]       # Schlüsselpaar ohne Oberfläche erzeugen
 ```
 
+Im Terminal zeigt `hush decrypt` den Text eingerückt und mit sichtbar gemachten Steuerzeichen an, damit eine
+Nachricht die Absenderzeile weder nachahmen noch überschreiben kann. Umgeleitet (`> datei`, `| clip`) kommt der
+Text unverändert heraus; die Absender-Prüfung steht immer auf stderr.
+
 ## Sicherheit
 
 **Verschlüsselung.** Nachrichten sind normale, ASCII-armierte [age](https://age-encryption.org)-Dateien
@@ -91,7 +95,7 @@ separaten Ed25519-Schlüssel. Die Signatur deckt auch den Schlüssel des Empfän
 signierte Nachricht also nicht an Dritte weiterverschlüsseln und so tun, als sei sie für diese bestimmt.
 
 **Fingerprints.** Ein öffentlicher Schlüssel, der per Messenger kommt, könnte unterwegs ausgetauscht worden sein.
-Vergleicht deshalb den 64-Bit-Fingerprint einmal über einen anderen Kanal (Anruf, persönlich).
+Vergleicht deshalb die 96-Bit-Fingerprints einmal vollständig über einen anderen Kanal (Anruf, persönlich).
 
 **Länge.** Nachrichten werden auf Blöcke von 128 Byte aufgefüllt, damit man an der Länge nicht ablesen kann,
 wie lang ein Passwort ist.
@@ -100,7 +104,8 @@ wie lang ein Passwort ist.
 (age/scrypt).
 
 **Zwischenablage.** Kopierter Klartext wird nach 30 Sekunden wieder gelöscht. Unter Windows wird er zusätzlich vom
-Zwischenablage-Verlauf (`Win+V`) und der Cloud-Synchronisierung ausgeschlossen. Die Oberfläche läuft im
+Zwischenablage-Verlauf (`Win+V`) und der Cloud-Synchronisierung ausgeschlossen; unter Linux und macOS können
+Zwischenablage-Manager wie Klipper oder Maccy trotzdem eine eigene Kopie behalten. Die Oberfläche läuft im
 alternativen Bildschirm des Terminals, entschlüsselte Texte bleiben also nicht im Scroll-Verlauf stehen.
 
 **Grenzen.** hush schützt nicht vor Schadsoftware auf deinem Rechner oder dem des Empfängers. Gegen
@@ -119,7 +124,9 @@ normalen `age`-CLI an dich verschlüsseln; hush zeigt solche Nachrichten als „
 
 `identity.key` enthält deinen privaten Schlüssel – sichern, aber niemals weitergeben.
 `contacts.json` enthält deine Kontakte. Mit `HUSH_HOME` lässt sich ein anderer Ordner verwenden,
-mit `HUSH_LANG=en` bzw. `HUSH_LANG=de` die Sprache festlegen.
+mit `HUSH_LANG=en` bzw. `HUSH_LANG=de` die Sprache festlegen. hush hält den Ordner privat: Unter Linux und
+macOS lehnt es einen Ordner ab, der einem anderen Benutzer gehört, und verschärft zu offene Rechte; unter
+Windows beschränkt es den Zugriff auf dein Konto.
 
 ## Entwicklung
 

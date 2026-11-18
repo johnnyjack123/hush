@@ -9,7 +9,7 @@ hush is a small terminal program with a comfortable keyboard interface. It is bu
 recipient knows it really came from you.
 
 ```
- hush   encrypt text, safely                                               You 7F3A-91C2
+ hush   encrypt text, safely
 ╭─ Contacts ─────────────────────╮╭─ Message to Alice ─────────────────────────────────╮
 │ ▸ Alice            ✓ 7F3A-91C2 ││ Will be encrypted for Alice and signed by you.     │
 │   Bob                C04E-1B77 ││                                                    │
@@ -29,8 +29,9 @@ recipient knows it really came from you.
 1. **Alice** starts hush. On first start it creates her key pair (optionally protected by a passphrase).
 2. She presses `k`, copies her **public key** (`hush1…`) and sends it to you.
 3. You copy the key and press `a`: hush takes it from the clipboard. Enter a name, done.
-4. Once, you compare your **fingerprints** (e.g. `7F3A-91C2-04BE-1D77`) over a second channel,
-   such as a phone call. If they match, mark Alice as verified with `v`.
+4. Once, you compare both **fingerprints** in full (e.g. `7F3A-91C2-04BE-1D77-A0C3-5E19`) over a
+   second channel, such as a phone call; hush shows both on Alice's contact page. If they match,
+   mark Alice as verified with `v`.
 5. Pick the contact, press `e`, type the password, press `Ctrl+S`. The encrypted message is now
    on the clipboard: just paste it into Telegram.
 6. Alice copies the message and presses `d` in hush. hush finds the message on the clipboard,
@@ -82,6 +83,10 @@ hush add Alice hush1…             # add a contact
 hush init [--no-passphrase]       # create a key pair without the interface
 ```
 
+In a terminal, `hush decrypt` shows the text indented and with control characters made visible, so
+a message can neither imitate nor overwrite the sender line. Redirected (`> file`, `| clip`), the
+text comes out unchanged; the sender check always goes to stderr.
+
 ## Security
 
 **Encryption.** Messages are regular ASCII-armored [age](https://age-encryption.org) files
@@ -92,7 +97,7 @@ inside the encryption with a separate Ed25519 key. The signature also covers the
 a recipient cannot re-encrypt a signed message to someone else and pass it off as meant for them.
 
 **Fingerprints.** A public key that arrives over a messenger could have been swapped on the way.
-Compare the 64-bit fingerprint once over another channel (a call, in person).
+Compare the 96-bit fingerprints once, in full, over another channel (a call, in person).
 
 **Length.** Messages are padded to blocks of 128 bytes, so their length does not reveal how long a
 password is.
@@ -100,7 +105,8 @@ password is.
 **Private key.** It stays on your device and can be encrypted with a passphrase (age/scrypt).
 
 **Clipboard.** Copied plain text is cleared again after 30 seconds. On Windows it is also kept out of
-the clipboard history (`Win+V`) and cloud sync. The interface runs in the terminal's alternate
+the clipboard history (`Win+V`) and cloud sync; on Linux and macOS, clipboard managers such as
+Klipper or Maccy may still keep their own copy. The interface runs in the terminal's alternate
 screen, so decrypted text does not remain in the scrollback.
 
 **Limits.** hush does not protect against malware on your machine or the recipient's. Against the
@@ -119,7 +125,8 @@ to you with the regular `age` CLI; hush shows such messages as "not signed".
 
 `identity.key` holds your private key: back it up, but never share it. `contacts.json` holds your
 contacts. `HUSH_HOME` selects a different folder, `HUSH_LANG=en` or `HUSH_LANG=de` sets the
-language.
+language. hush keeps the folder private: on Linux and macOS it refuses a folder owned by another
+user and tightens loose permissions, on Windows it restricts access to your account.
 
 ## Development
 

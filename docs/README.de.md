@@ -27,7 +27,7 @@ Nachricht, damit der Empfänger weiß, dass sie wirklich von dir kommt.
 ## So funktioniert's
 
 1. **Alice** startet hush. Beim ersten Start wird ihr Schlüsselpaar erzeugt (optional mit Passphrase).
-2. Sie drückt `k`, kopiert ihren **öffentlichen Schlüssel** (`hush1…`) und schickt ihn dir.
+2. Sie drückt `k`, um ihren **öffentlichen Schlüssel** (`hush1…`) anzuzeigen, kopiert ihn mit `c` und schickt ihn dir.
 3. Du kopierst den Schlüssel und drückst `a` – hush übernimmt ihn aus der Zwischenablage. Name eingeben, fertig.
 4. Ihr vergleicht einmal beide **Fingerprints** vollständig (z. B. `7F3A-91C2-04BE-1D77-A0C3-5E19`) über einen zweiten Kanal,
    etwa per Anruf – hush zeigt beide auf Alices Kontaktseite. Stimmen sie, markierst du Alice mit `v` als verifiziert.
@@ -62,7 +62,8 @@ go install github.com/johnnyjack123/hush@latest
 | `a`         | Kontakt hinzufügen                                  |
 | `v`         | Fingerprint als verifiziert markieren               |
 | `r` / `x`   | Kontakt umbenennen / löschen                        |
-| `k`         | Eigener Schlüssel: Passphrase (`p`), Gerät merken (`m`) |
+| `k`         | Eigener Schlüssel: kopieren (`c`), Passphrase (`p`), Gerät merken (`m`) |
+| `esc`       | Zurück zur Kontaktliste                             |
 | `?`         | Hilfe                                               |
 | `q`         | Beenden                                             |
 

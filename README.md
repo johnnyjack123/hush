@@ -27,7 +27,7 @@ recipient knows it really came from you.
 ## How it works
 
 1. **Alice** starts hush. On first start it creates her key pair (optionally protected by a passphrase).
-2. She presses `k`, copies her **public key** (`hush1…`) and sends it to you.
+2. She presses `k` to show her **public key** (`hush1…`), copies it with `c` and sends it to you.
 3. You copy the key and press `a`: hush takes it from the clipboard. Enter a name, done.
 4. Once, you compare both **fingerprints** in full (e.g. `7F3A-91C2-04BE-1D77-A0C3-5E19`) over a
    second channel, such as a phone call; hush shows both on Alice's contact page. If they match,
@@ -64,7 +64,8 @@ go install github.com/johnnyjack123/hush@latest
 | `a`         | Add a contact                                    |
 | `v`         | Mark the fingerprint as verified                 |
 | `r` / `x`   | Rename / delete a contact                        |
-| `k`         | Your key: passphrase (`p`), remember device (`m`) |
+| `k`         | Your key: copy (`c`), passphrase (`p`), remember device (`m`) |
+| `esc`       | Back to the contact list                         |
 | `?`         | Help                                             |
 | `q`         | Quit                                             |
 

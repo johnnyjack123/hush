@@ -366,7 +366,7 @@ func (m Model) viewHelp() string {
 		switch m.mode {
 		case modeBrowse:
 			pairs = []string{"e", T("key.encrypt"), "d", T("key.decrypt"),
-				"a", T("key.add"), "k", T("key.mykey"), "?", T("key.help"), "q", T("key.quit")}
+				"a", T("key.add"), "k", T("key.mykey"), "q", T("key.quit"), "?", T("key.help")}
 		case modeCompose:
 			pairs = []string{"ctrl+s", T("key.encrypt"), "esc", T("key.cancel")}
 		case modeSealed:
@@ -385,7 +385,18 @@ func (m Model) viewHelp() string {
 			pairs = []string{"esc", T("key.back")}
 		}
 	}
-	return ansi.Truncate(" "+keyHelp(pairs...), m.width, "…")
+	return fitHelp(pairs, m.width)
+}
+
+// fitHelp drops hints, starting with the second to last, until the bar fits.
+// The last hint stays because it is how to get back or find help; cutting
+// the bar off at the edge would hide exactly that one.
+func fitHelp(pairs []string, width int) string {
+	for len(pairs) >= 4 && lipgloss.Width(" "+keyHelp(pairs...)) > width {
+		n := len(pairs)
+		pairs = append(append([]string{}, pairs[:n-4]...), pairs[n-2:]...)
+	}
+	return ansi.Truncate(" "+keyHelp(pairs...), width, "…")
 }
 
 func (m Model) viewSetup() string {

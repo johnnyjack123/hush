@@ -580,10 +580,32 @@ func (m *Model) updateMain(msg tea.KeyMsg) tea.Cmd {
 		m.formErr = ""
 
 	case modeHelp:
+		switch k {
+		case "esc", "enter", "?":
+			m.setMode(modeBrowse)
+			return nil
+		}
+	}
+	// The read-only panes keep the main shortcuts working, so that adding a
+	// contact or decrypting does not depend on finding "esc" first.
+	if m.readOnlyPane() && mainShortcuts[k] {
 		m.setMode(modeBrowse)
-		return nil
+		return m.updateBrowse(msg)
 	}
 	return m.forward(msg)
+}
+
+// mainShortcuts are the contact list keys that also work from read-only
+// panes. Keys acting on the selected contact (v, r, x) are left out, as
+// that contact is not what the pane shows.
+var mainShortcuts = map[string]bool{"a": true, "d": true, "e": true, "k": true, "?": true, "q": true}
+
+func (m *Model) readOnlyPane() bool {
+	switch m.mode {
+	case modeSealed, modeOpened, modeMyKey, modeHelp:
+		return true
+	}
+	return false
 }
 
 func (m *Model) updateBrowse(msg tea.KeyMsg) tea.Cmd {

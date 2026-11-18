@@ -22,6 +22,7 @@ jobs:
           go-version-file: go.mod
       - run: go vet ./...
       - run: go test ./...
+      - run: go run ./tools/licenses -check
 
   # Hosted macOS runners are often unavailable for hours; macOS shares all
   # non-Windows code paths with Linux, so checking that it compiles is enough.

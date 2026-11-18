@@ -7,6 +7,8 @@
 package keys
 
 import (
+	"bytes"
+	"crypto/ecdh"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
@@ -17,6 +19,7 @@ import (
 	"time"
 
 	"filippo.io/age"
+	"filippo.io/edwards25519"
 
 	"github.com/johnnyjack123/hush/internal/bech32"
 )
@@ -55,19 +58,31 @@ func ParsePublicKey(s string) (PublicKey, error) {
 	return PublicKeyFromBytes(data[1:])
 }
 
-// FindPublicKey returns the first "hush1…" token in s, or "" if there is none,
-// so that a key pasted together with a greeting from a messenger still parses.
+// FindPublicKey returns the first valid "hush1…" key in s, so that a key
+// pasted together with a greeting from a messenger still parses. Without a
+// valid key it returns the first "hush1…" token, or "" if there is none, so
+// that callers can report the invalid key.
 func FindPublicKey(s string) string {
 	lower := strings.ToLower(s)
-	i := strings.Index(lower, publicKeyHRP+"1")
-	if i < 0 {
-		return ""
+	first := ""
+	for rest := lower; ; {
+		i := strings.Index(rest, publicKeyHRP+"1")
+		if i < 0 {
+			return first
+		}
+		j := i + len(publicKeyHRP) + 1
+		for j < len(rest) && bech32.IsDataChar(rest[j]) {
+			j++
+		}
+		token := rest[i:j]
+		if _, err := ParsePublicKey(token); err == nil {
+			return token
+		}
+		if first == "" {
+			first = token
+		}
+		rest = rest[j:]
 	}
-	j := i + len(publicKeyHRP) + 1
-	for j < len(lower) && bech32.IsDataChar(lower[j]) {
-		j++
-	}
-	return lower[i:j]
 }
 
 // PublicKeyFromBytes builds a public key from its 64-byte raw form.
@@ -78,10 +93,65 @@ func PublicKeyFromBytes(b []byte) (PublicKey, error) {
 	}
 	copy(pk.enc[:], b[:32])
 	copy(pk.sign[:], b[32:])
+	if err := pk.validate(); err != nil {
+		return PublicKey{}, fmt.Errorf("%w: %v", ErrInvalidPublicKey, err)
+	}
 	if _, err := pk.recipient(); err != nil {
 		return PublicKey{}, fmt.Errorf("%w: %v", ErrInvalidPublicKey, err)
 	}
 	return pk, nil
+}
+
+// lowOrderProbe is an arbitrary fixed scalar; X25519 with it yields zero
+// exactly for the small-order points.
+var lowOrderProbe = func() *ecdh.PrivateKey {
+	seed := sha256.Sum256([]byte("hush/v1 low-order probe"))
+	k, err := ecdh.X25519().NewPrivateKey(seed[:])
+	if err != nil {
+		panic(err)
+	}
+	return k
+}()
+
+// validate rejects what a generated key never contains. Non-canonical
+// encodings would give one key several fingerprints. A small-order X25519
+// point makes encryption fail, and a small-order Ed25519 key accepts a
+// signature anyone can forge (R = identity, S = 0 verifies for any message).
+func (pk PublicKey) validate() error {
+	if !canonicalX25519(pk.enc) {
+		return errors.New("non-canonical encryption key")
+	}
+	enc, err := ecdh.X25519().NewPublicKey(pk.enc[:])
+	if err != nil {
+		return err
+	}
+	if _, err := lowOrderProbe.ECDH(enc); err != nil {
+		return errors.New("weak encryption key")
+	}
+	p, err := new(edwards25519.Point).SetBytes(pk.sign[:])
+	if err != nil || !bytes.Equal(p.Bytes(), pk.sign[:]) {
+		return errors.New("invalid signing key")
+	}
+	if new(edwards25519.Point).MultByCofactor(p).Equal(edwards25519.NewIdentityPoint()) == 1 {
+		return errors.New("weak signing key")
+	}
+	return nil
+}
+
+// canonicalX25519 reports whether u, little endian, is below 2^255 - 19.
+func canonicalX25519(u [32]byte) bool {
+	if u[31]&0x80 != 0 {
+		return false
+	}
+	if u[31] != 0x7f || u[0] < 0xed {
+		return true
+	}
+	for _, b := range u[1:31] {
+		if b != 0xff {
+			return true
+		}
+	}
+	return false
 }
 
 // Bytes returns the 64-byte raw form.
@@ -133,9 +203,10 @@ func (pk PublicKey) Verify(msg, sig []byte) bool {
 }
 
 // Fingerprint is a short hash of a public key, meant to be compared out of band.
-// 64 bits keep it readable over the phone while making a matching forged key
-// (a second preimage) infeasible to compute.
-type Fingerprint [8]byte
+// It is 96 bits because an attacker may search for a key matching any one of
+// the N keys they have seen, which costs only 2^bits / N hashes: at 64 bits
+// and a few thousand observed keys that is hours on a GPU.
+type Fingerprint [12]byte
 
 // Fingerprint returns the fingerprint of pk.
 func (pk PublicKey) Fingerprint() Fingerprint {
@@ -145,11 +216,13 @@ func (pk PublicKey) Fingerprint() Fingerprint {
 	return f
 }
 
-// String returns the full form, e.g. "7F3A-91C2-04BE-1D77".
+// String returns the full form, e.g. "7F3A-91C2-04BE-1D77-A0C3-5E19".
 func (f Fingerprint) String() string {
-	return fmt.Sprintf("%04X-%04X-%04X-%04X",
-		uint16(f[0])<<8|uint16(f[1]), uint16(f[2])<<8|uint16(f[3]),
-		uint16(f[4])<<8|uint16(f[5]), uint16(f[6])<<8|uint16(f[7]))
+	groups := make([]string, 0, len(f)/2)
+	for i := 0; i < len(f); i += 2 {
+		groups = append(groups, fmt.Sprintf("%02X%02X", f[i], f[i+1]))
+	}
+	return strings.Join(groups, "-")
 }
 
 // Short returns the first two groups, for recognising a key at a glance.

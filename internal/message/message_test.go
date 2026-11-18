@@ -165,3 +165,23 @@ func rewrap(s string, n int) string {
 	}
 	return strings.Join(append(parts, s), "\n")
 }
+
+func TestOpenRejectsOversizedPlainAgeMessage(t *testing.T) {
+	bob := mustIdentity(t)
+	var buf bytes.Buffer
+	aw := armor.NewWriter(&buf)
+	w, _ := age.Encrypt(aw, bob.Public().Recipient())
+	w.Write(bytes.Repeat([]byte("x"), 2*MaxTextSize))
+	w.Close()
+	aw.Close()
+	if _, err := Open(buf.String(), bob); !errors.Is(err, ErrTooLong) {
+		t.Fatalf("err = %v, want ErrTooLong instead of a silently truncated text", err)
+	}
+}
+
+func TestSealRejectsInvalidUTF8(t *testing.T) {
+	alice, bob := mustIdentity(t), mustIdentity(t)
+	if _, err := Seal("caf\xe9", alice, bob.Public(), time.Now()); !errors.Is(err, ErrNotText) {
+		t.Fatalf("err = %v, want ErrNotText", err)
+	}
+}

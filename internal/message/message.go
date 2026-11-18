@@ -40,6 +40,8 @@ var (
 	ErrCorrupt = errors.New("message is damaged or invalid")
 	// ErrTooLong means the text exceeds MaxTextSize.
 	ErrTooLong = errors.New("text is too long")
+	// ErrNotText means the input to seal is not valid UTF-8, which Open would reject.
+	ErrNotText = errors.New("text is not valid UTF-8")
 )
 
 // MaxTextSize bounds the text of a message; hush is for short secrets, not files.
@@ -64,6 +66,9 @@ const (
 func Seal(text string, from *keys.Identity, to keys.PublicKey, now time.Time) (string, error) {
 	if len(text) > MaxTextSize {
 		return "", ErrTooLong
+	}
+	if !utf8.ValidString(text) {
+		return "", ErrNotText
 	}
 	payload := envelope(text, from, to, now)
 
@@ -141,9 +146,15 @@ func Open(input string, me *keys.Identity) (*Opened, error) {
 		}
 		return nil, fmt.Errorf("%w: %v", ErrCorrupt, err)
 	}
-	plain, err := io.ReadAll(io.LimitReader(r, headerSize+MaxTextSize+padBlock))
+	const maxPlain = headerSize + MaxTextSize + padBlock
+	plain, err := io.ReadAll(io.LimitReader(r, maxPlain+1))
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrCorrupt, err)
+	}
+	if len(plain) > maxPlain {
+		// Plain age messages have no length field, so reading only a prefix
+		// would silently show a truncated text.
+		return nil, ErrTooLong
 	}
 	if !bytes.HasPrefix(plain, magic) {
 		if !utf8.Valid(plain) {

@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/johnnyjack123/hush/internal/i18n"
 	"github.com/johnnyjack123/hush/internal/keys"
 	"github.com/johnnyjack123/hush/internal/store"
+	"github.com/johnnyjack123/hush/internal/termsafe"
 )
 
 const labelWidth = 15
@@ -42,10 +44,12 @@ func (m Model) View() string {
 }
 
 func (m Model) viewHeader() string {
+	// The own fingerprint is deliberately not shown here: a short form in
+	// plain sight invites comparing only part of it.
 	left := sBadge.Render("hush") + "  " + sDim.Render(T("app.tagline"))
-	right := sDim.Render(T("header.you")+" ") + sAccent.Render(m.id.Public().Fingerprint().Short())
+	right := ""
 	if !m.locked {
-		right = sWarn.Render("⚠ "+T("header.unprotected")) + sDim.Render(" · ") + right
+		right = sWarn.Render("⚠ " + T("header.unprotected"))
 	}
 	gap := m.width - lipgloss.Width(left) - lipgloss.Width(right) - 1
 	if gap < 1 {
@@ -138,7 +142,10 @@ func (m Model) viewContact(c *store.Contact, w int) string {
 		"",
 	}
 	if !c.Verified {
-		lines = append(lines, sWarn.Render(T("contact.verify_hint", c.Name)), "")
+		lines = append(lines,
+			sWarn.Render(T("contact.verify_hint", c.Name)),
+			sAccent.Bold(true).Render(m.id.Public().Fingerprint().String()),
+			"")
 	}
 	lines = append(lines, keyHelp(
 		"e", T("key.encrypt"), "v", T("key.verify"), "r", T("key.rename"), "x", T("key.delete")))
@@ -176,12 +183,15 @@ func (m Model) viewAdd() string {
 }
 
 func (m Model) viewPassphraseForm(hint string) string {
-	lines := []string{
-		sDim.Render(hint),
-		"",
-		field(T("pass.new"), m.pass.View(), m.focus == 0),
-		"",
-		field(T("pass.repeat"), m.pass2.View(), m.focus == 1),
+	labels := []string{T("pass.new"), T("pass.repeat")}
+	inputs := []textinput.Model{m.pass, m.pass2}
+	if m.screen == screenMain && m.locked {
+		labels = []string{T("pass.current"), T("pass.new_change"), T("pass.repeat")}
+		inputs = append([]textinput.Model{m.old}, inputs...)
+	}
+	lines := []string{sDim.Render(hint)}
+	for i, in := range inputs {
+		lines = append(lines, "", field(labels[i], in.View(), m.focus == i))
 	}
 	if m.busy != "" {
 		lines = append(lines, "", m.spinner.View()+" "+m.busy)
@@ -211,6 +221,8 @@ func (m *Model) refreshContent() {
 	case modeHelp:
 		s = helpContent(w)
 	default:
+		// Drop whatever was shown before, a decrypted text in particular.
+		m.content.SetContent("")
 		return
 	}
 	m.content.SetContent(lipgloss.NewStyle().Width(max(w, 1)).Render(s))
@@ -225,6 +237,8 @@ func (m *Model) openedContent(w int) string {
 	switch {
 	case o.Sender == nil:
 		lines = append(lines, sWarn.Render("⚠ "+T("opened.unsigned")))
+	case *o.Sender == m.id.Public():
+		lines = append(lines, sOK.Render("✓ "+T("opened.signed_self")))
 	case m.book.ByKey(*o.Sender) == nil:
 		lines = append(lines,
 			sWarn.Render("⚠ "+T("opened.unknown_sender")),
@@ -243,7 +257,9 @@ func (m *Model) openedContent(w int) string {
 	if !o.SentAt.IsZero() {
 		lines = append(lines, sDim.Render(T("opened.sent_at", i18n.Time(o.SentAt))))
 	}
-	lines = append(lines, "", sQuote.Width(max(w-2, 1)).Render(o.Text), "", keyHelp("c", T("key.copy_secret")))
+	// The text comes from the sender and must not be able to drive the terminal.
+	text := termsafe.Text(o.Text)
+	lines = append(lines, "", sQuote.Width(max(w-2, 1)).Render(text), "", keyHelp("c", T("key.copy_secret")))
 	return strings.Join(lines, "\n")
 }
 
@@ -296,10 +312,14 @@ func helpContent(w int) string {
 
 func (m Model) viewStatus() string {
 	if m.confirm != confirmNone {
-		c := m.selected()
-		q := T("confirm.delete", c.Name)
-		if m.confirm == confirmVerify {
-			q = T("confirm.verify", c.Name, c.PublicKey().Fingerprint().String())
+		var q string
+		switch c := m.selected(); m.confirm {
+		case confirmDelete:
+			q = T("confirm.delete", c.Name)
+		case confirmVerify:
+			q = T("confirm.verify", c.Name)
+		case confirmRemovePassphrase:
+			q = T("confirm.remove_passphrase")
 		}
 		return ansi.Truncate(" "+sWarn.Bold(true).Render(q)+"  "+keyHelp(T("key.yes_key"), T("key.yes"), "n", T("key.no")), m.width, "…")
 	}

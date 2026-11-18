@@ -30,14 +30,17 @@ func WriteSecret(s string) error {
 }
 
 // ClearIf empties the clipboard if it still holds s, so that text the user
-// has copied since is left alone.
-func ClearIf(s string) error {
+// has copied since is left alone. cleared reports whether it emptied it.
+func ClearIf(s string) (cleared bool, err error) {
 	cur, err := Read()
 	if err != nil {
-		return err
+		return false, err
 	}
 	if cur != strings.ReplaceAll(s, "\r\n", "\n") {
-		return nil
+		return false, nil
 	}
-	return clipboard.WriteAll("")
+	if err := clipboard.WriteAll(""); err != nil {
+		return false, err
+	}
+	return true, nil
 }

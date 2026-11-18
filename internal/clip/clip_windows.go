@@ -54,10 +54,17 @@ func writeSecret(s string) error {
 	}
 	defer procCloseClipboard.Call()
 
-	if r, _, err := procEmptyClipboard.Call(); r == 0 {
+	if err := setSecret(text); err != nil {
+		// CloseClipboard publishes whatever was set so far; the text without
+		// the privacy formats would end up in clipboard history.
+		procEmptyClipboard.Call()
 		return err
 	}
-	if err := setData(cfUnicodeText, unsafe.Pointer(&text[0]), uintptr(len(text)*2)); err != nil {
+	return nil
+}
+
+func setSecret(text []uint16) error {
+	if r, _, err := procEmptyClipboard.Call(); r == 0 {
 		return err
 	}
 	var no uint32 // DWORD 0 = "do not include"
@@ -70,7 +77,7 @@ func writeSecret(s string) error {
 			return err
 		}
 	}
-	return nil
+	return setData(cfUnicodeText, unsafe.Pointer(&text[0]), uintptr(len(text)*2))
 }
 
 // openClipboard retries because another application may briefly hold the clipboard.

@@ -2,7 +2,6 @@ package i18n
 
 var de = map[string]string{
 	"app.tagline":        "Texte sicher verschlüsseln",
-	"header.you":         "Du",
 	"header.unprotected": "ohne Passphrase",
 	"ui.too_small":       "Terminal zu klein – mindestens %d×%d Zeichen.",
 
@@ -17,7 +16,7 @@ var de = map[string]string{
 	"start.heading": "So funktioniert's",
 	"start.step1":   "Drücke k und schicke deinen öffentlichen Schlüssel an deinen Kontakt.",
 	"start.step2":   "Lass dir den Schlüssel deines Kontakts schicken und füge ihn mit a hinzu.",
-	"start.step3":   "Gleicht eure Fingerprints über einen zweiten Kanal ab, z. B. per Anruf, und bestätige mit v.",
+	"start.step3":   "Gleicht eure Fingerprints vollständig über einen zweiten Kanal ab, z.\u00a0B. per Anruf, und bestätige mit v.",
 	"start.step4":   "Wähle den Kontakt, drücke e und gib den Text ein. Die verschlüsselte Nachricht landet in der Zwischenablage.",
 	"start.step5":   "Empfangene Nachricht kopieren und d drücken – fertig.",
 
@@ -27,7 +26,7 @@ var de = map[string]string{
 	"contact.public_key":  "Öffentlicher Schlüssel",
 	"contact.verified":    "verifiziert",
 	"contact.unverified":  "nicht verifiziert",
-	"contact.verify_hint": "Vergleiche den Fingerprint mit %s über einen zweiten Kanal (z. B. per Anruf) und drücke dann v.",
+	"contact.verify_hint": "Gleicht beide Fingerprints vollständig über einen zweiten Kanal ab (z.\u00a0B. per Anruf) und drücke dann v. %s muss deinen bestätigen:",
 
 	"compose.title":       "Nachricht an %s",
 	"compose.hint":        "Wird für %s verschlüsselt und von dir signiert.",
@@ -104,7 +103,7 @@ var de = map[string]string{
 	"help.sec4":     "Prüfe Fingerprints über einen zweiten Kanal, z. B. per Anruf.",
 
 	"confirm.delete": "%s wirklich löschen?",
-	"confirm.verify": "Hast du den Fingerprint %[2]s mit %[1]s abgeglichen?",
+	"confirm.verify": "Hast du beide Fingerprints vollständig mit %s abgeglichen?",
 
 	"key.yes":         "ja",
 	"key.yes_key":     "j",
@@ -194,4 +193,20 @@ Sprache: HUSH_LANG=de oder HUSH_LANG=en
 	"cli.created":           "Schlüsselpaar erzeugt. Dein öffentlicher Schlüssel:",
 	"cli.added":             "%s hinzugefügt (Fingerprint %s).",
 	"cli.no_tty":            "Kein Terminal für die Eingabe verfügbar.",
+
+	"confirm.remove_passphrase":     "Passphrase entfernen? Der Schlüssel wird dann unverschlüsselt gespeichert.",
+	"pass.current":                  "Aktuelle Passphrase",
+	"pass.new_change":               "Neue Passphrase",
+	"opened.signed_self":            "Von dir selbst signiert",
+	"status.clipboard_clear_failed": "Zwischenablage konnte nicht geleert werden – neuer Versuch in Kürze.",
+	"clip.not_cleared":              "Die Zwischenablage konnte nicht geleert werden und enthält eventuell noch den kopierten Klartext.",
+
+	"err.invalid_name":     "Der Name darf keine Steuerzeichen enthalten und höchstens 64 Zeichen lang sein.",
+	"err.contacts_changed": "Die Kontakte wurden zwischendurch von einem anderen hush-Fenster geändert. Bitte noch einmal versuchen.",
+	"err.identity_exists":  "Es gibt bereits ein Schlüsselpaar – es wird nicht überschrieben.",
+	"err.unsafe_dir":       "Der Datenordner gehört einem anderen Benutzer. Wähle mit HUSH_HOME einen eigenen Ordner.",
+	"err.not_text":         "Der Text ist kein gültiges UTF-8 (z.\u00a0B. eine anders kodierte Datei).",
+	"err.contacts_file":    "%s ist ungültig: %s",
+	"cli.multiline":        "Mehrzeilige oder sehr lange Texte bitte per Pipe übergeben (z.\u00a0B. hush encrypt Alice < datei.txt) oder die Oberfläche nutzen.",
+	"cli.usage_decrypt":    "Verwendung: hush decrypt < nachricht.txt  (ohne Eingabe wird die Zwischenablage gelesen)",
 }

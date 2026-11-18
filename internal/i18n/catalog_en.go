@@ -2,7 +2,6 @@ package i18n
 
 var en = map[string]string{
 	"app.tagline":        "encrypt text, safely",
-	"header.you":         "You",
 	"header.unprotected": "no passphrase",
 	"ui.too_small":       "Terminal too small – needs at least %d×%d characters.",
 
@@ -17,7 +16,7 @@ var en = map[string]string{
 	"start.heading": "How it works",
 	"start.step1":   "Press k and send your public key to your contact.",
 	"start.step2":   "Have your contact send you their key and add it with a.",
-	"start.step3":   "Compare your fingerprints over a second channel, e.g. a phone call, and confirm with v.",
+	"start.step3":   "Compare your fingerprints in full over a second channel, e.g. a phone call, and confirm with v.",
 	"start.step4":   "Select the contact, press e and enter the text. The encrypted message lands on your clipboard.",
 	"start.step5":   "To read a message you received, copy it and press d.",
 
@@ -27,7 +26,7 @@ var en = map[string]string{
 	"contact.public_key":  "Public key",
 	"contact.verified":    "verified",
 	"contact.unverified":  "not verified",
-	"contact.verify_hint": "Compare the fingerprint with %s over a second channel (e.g. a phone call), then press v.",
+	"contact.verify_hint": "Compare both fingerprints in full over a second channel (e.g. a phone call), then press v. %s has to confirm yours:",
 
 	"compose.title":       "Message to %s",
 	"compose.hint":        "Will be encrypted for %s and signed by you.",
@@ -104,7 +103,7 @@ var en = map[string]string{
 	"help.sec4":     "Verify fingerprints over a second channel, e.g. a phone call.",
 
 	"confirm.delete": "Really delete %s?",
-	"confirm.verify": "Did you compare fingerprint %[2]s with %[1]s?",
+	"confirm.verify": "Did you compare both fingerprints in full with %s?",
 
 	"key.yes":         "yes",
 	"key.yes_key":     "y",
@@ -194,4 +193,20 @@ Language: HUSH_LANG=en or HUSH_LANG=de
 	"cli.created":           "Key pair created. Your public key:",
 	"cli.added":             "%s added (fingerprint %s).",
 	"cli.no_tty":            "No terminal available for input.",
+
+	"confirm.remove_passphrase":     "Remove the passphrase? The key will then be stored unencrypted.",
+	"pass.current":                  "Current passphrase",
+	"pass.new_change":               "New passphrase",
+	"opened.signed_self":            "Signed by yourself",
+	"status.clipboard_clear_failed": "Could not clear the clipboard – retrying shortly.",
+	"clip.not_cleared":              "The clipboard could not be cleared and may still hold the copied plain text.",
+
+	"err.invalid_name":     "Names must not contain control characters and may be at most 64 characters long.",
+	"err.contacts_changed": "The contacts were changed by another hush window in the meantime. Please try again.",
+	"err.identity_exists":  "A key pair already exists and will not be replaced.",
+	"err.unsafe_dir":       "The data folder belongs to another user. Choose your own folder with HUSH_HOME.",
+	"err.not_text":         "The text is not valid UTF-8 (e.g. a file in another encoding).",
+	"err.contacts_file":    "%s is invalid: %s",
+	"cli.multiline":        "Please pipe multi-line or very long text (e.g. hush encrypt Alice < file.txt) or use the interface.",
+	"cli.usage_decrypt":    "Usage: hush decrypt < message.txt  (without input, the clipboard is read)",
 }

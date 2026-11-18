@@ -2,8 +2,12 @@
 package tui
 
 import (
+	"errors"
+	"fmt"
+	"os"
 	"strings"
 	"time"
+	"unicode/utf16"
 
 	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -59,6 +63,7 @@ const (
 	confirmNone confirmKind = iota
 	confirmDelete
 	confirmVerify
+	confirmRemovePassphrase
 )
 
 type statusKind int
@@ -73,8 +78,13 @@ const (
 const (
 	statusDuration      = 6 * time.Second
 	clipboardClearDelay = 30 * time.Second
-	minWidth            = 64
-	minHeight           = 18
+	clipboardRetryDelay = 5 * time.Second
+	// pasteGap separates typing from pasting. Windows consoles deliver a
+	// paste as separate key events without bracketed-paste markers, a few
+	// microseconds apart; even key repeat is slower than this.
+	pasteGap  = 25 * time.Millisecond
+	minWidth  = 64
+	minHeight = 18
 )
 
 type readyKind int
@@ -120,6 +130,7 @@ type Model struct {
 	paste   textarea.Model
 	name    textinput.Model
 	key     textinput.Model
+	old     textinput.Model // current passphrase, required to change it
 	pass    textinput.Model
 	pass2   textinput.Model
 	focus   int
@@ -140,6 +151,10 @@ type Model struct {
 	// clipSecret is decrypted text hush put on the clipboard and must clear again.
 	clipSecret string
 	clipID     int
+
+	now           func() time.Time
+	lastKey       time.Time // when handling the previous key finished
+	highSurrogate rune
 }
 
 // New builds the model, deciding between first-run setup, unlock and the main screen.
@@ -155,10 +170,12 @@ func New(s *store.Store) (Model, error) {
 		paste:   newTextarea(T("paste.placeholder")),
 		name:    newInput(T("add.name_placeholder"), false),
 		key:     newInput("hush1…", false),
+		old:     newInput("", true),
 		pass:    newInput("", true),
 		pass2:   newInput("", true),
 		content: viewport.New(0, 0),
 		spinner: spinner.New(spinner.WithSpinner(spinner.MiniDot), spinner.WithStyle(sAccent)),
+		now:     time.Now,
 	}
 	m.name.CharLimit = 40
 
@@ -191,7 +208,9 @@ func Run(s *store.Store) error {
 	// The alternate screen keeps decrypted text out of the terminal's scrollback.
 	final, err := tea.NewProgram(m, tea.WithAltScreen()).Run()
 	if fm, ok := final.(Model); ok {
-		fm.clearClipboard()
+		if _, cerr := fm.clearClipboard(); cerr != nil {
+			fmt.Fprintln(os.Stderr, "⚠ "+T("clip.not_cleared"))
+		}
 	}
 	return err
 }
@@ -251,9 +270,16 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		}
 		return nil
 	case clipboardExpiredMsg:
-		if msg.id == m.clipID && m.clipSecret != "" {
-			m.clearClipboard()
-			m.clipSecret = ""
+		if msg.id != m.clipID || m.clipSecret == "" {
+			return nil
+		}
+		cleared, err := m.clearClipboard()
+		if err != nil {
+			// Keep the secret so that the retry and the clear on exit still happen.
+			return tea.Batch(m.setStatus(statusWarn, T("status.clipboard_clear_failed")), m.clipTimer(clipboardRetryDelay))
+		}
+		m.clipSecret = ""
+		if cleared {
 			return m.setStatus(statusInfo, T("status.clipboard_cleared"))
 		}
 		return nil
@@ -263,7 +289,14 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		if msg.String() == "ctrl+c" {
 			return tea.Quit
 		}
-		if m.busy != "" {
+		msg, ok := m.joinSurrogates(msg)
+		if !ok {
+			return nil
+		}
+		since := m.now().Sub(m.lastKey)
+		pasted := msg.Paste || !m.lastKey.IsZero() && since >= 0 && since < pasteGap
+		defer func() { m.lastKey = m.now() }()
+		if m.busy != "" || pasted && !m.takesPastedKey(msg) {
 			return nil
 		}
 		switch m.screen {
@@ -282,11 +315,9 @@ func (m *Model) forward(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	switch {
 	case m.screen != screenMain || m.mode == modePassphrase:
-		if m.focus == 0 {
-			m.pass, cmd = m.pass.Update(msg)
-		} else {
-			m.pass2, cmd = m.pass2.Update(msg)
-		}
+		fields := m.passFields()
+		f := fields[min(m.focus, len(fields)-1)]
+		*f, cmd = f.Update(msg)
 	case m.mode == modeCompose:
 		m.compose, cmd = m.compose.Update(msg)
 	case m.mode == modePaste:
@@ -310,8 +341,10 @@ func (m *Model) forward(msg tea.Msg) tea.Cmd {
 
 func (m *Model) updateSetup(msg tea.KeyMsg) tea.Cmd {
 	switch msg.String() {
-	case "tab", "down", "shift+tab", "up":
-		return m.focusPass(1 - m.focus)
+	case "tab", "down":
+		return m.focusPass(m.focus + 1)
+	case "shift+tab", "up":
+		return m.focusPass(m.focus - 1)
 	case "enter":
 		if m.focus == 0 {
 			return m.focusPass(1)
@@ -325,7 +358,7 @@ func (m *Model) updateSetup(msg tea.KeyMsg) tea.Cmd {
 		return m.startBusy(T("busy.creating"), func() tea.Msg {
 			id, err := keys.Generate()
 			if err == nil {
-				err = s.SaveIdentity(id, passphrase)
+				err = s.CreateIdentity(id, passphrase)
 			}
 			return identityMsg{kind: readyCreated, id: id, locked: passphrase != "", err: err}
 		})
@@ -359,11 +392,16 @@ func (m *Model) identityReady(msg identityMsg) tea.Cmd {
 	m.busy = ""
 	if msg.err != nil {
 		m.formErr = i18n.Err(msg.err)
-		if msg.kind == readyUnlocked {
+		switch msg.kind {
+		case readyUnlocked:
 			m.pass.Reset()
+		case readyPassphraseChanged:
+			m.old.Reset()
+			return m.focusPass(0)
 		}
 		return nil
 	}
+	m.old.Reset()
 	m.pass.Reset()
 	m.pass2.Reset()
 	m.id = msg.id
@@ -427,7 +465,6 @@ func (m *Model) updateMain(msg tea.KeyMsg) tea.Cmd {
 	case modeOpened:
 		switch k {
 		case "esc", "enter":
-			m.opened = nil
 			m.setMode(modeBrowse)
 			return nil
 		case "c":
@@ -478,26 +515,29 @@ func (m *Model) updateMain(msg tea.KeyMsg) tea.Cmd {
 	case modePassphrase:
 		switch k {
 		case "esc":
+			m.old.Reset()
 			m.pass.Reset()
 			m.pass2.Reset()
 			m.setMode(modeMyKey)
 			return nil
-		case "tab", "down", "shift+tab", "up":
-			return m.focusPass(1 - m.focus)
+		case "tab", "down":
+			return m.focusPass(m.focus + 1)
+		case "shift+tab", "up":
+			return m.focusPass(m.focus - 1)
 		case "enter":
-			if m.focus == 0 {
-				return m.focusPass(1)
+			if m.focus < len(m.passFields())-1 {
+				return m.focusPass(m.focus + 1)
 			}
 			if m.pass.Value() != m.pass2.Value() {
 				m.formErr = T("pass.mismatch")
 				m.pass2.Reset()
 				return nil
 			}
-			passphrase, s, id := m.pass.Value(), m.store, m.id
-			return m.startBusy(T("busy.saving"), func() tea.Msg {
-				err := s.SaveIdentity(id, passphrase)
-				return identityMsg{kind: readyPassphraseChanged, id: id, locked: passphrase != "", err: err}
-			})
+			if m.pass.Value() == "" {
+				m.confirm = confirmRemovePassphrase
+				return nil
+			}
+			return m.savePassphrase()
 		}
 		m.formErr = ""
 
@@ -564,27 +604,46 @@ func (m *Model) updateBrowse(msg tea.KeyMsg) tea.Cmd {
 	return nil
 }
 
+// updateConfirm treats every key other than yes as no, so that stray input
+// cannot wait in front of the prompt until a "y" comes along.
 func (m *Model) updateConfirm(msg tea.KeyMsg) tea.Cmd {
 	kind := m.confirm
+	m.confirm = confirmNone
 	switch msg.String() {
 	case "y", "j", "Y", "J":
-		m.confirm = confirmNone
-		c := m.selected()
-		if c == nil {
-			return nil
-		}
-		name := c.Name
-		if kind == confirmDelete {
-			m.book.Remove(m.cursor)
-			m.cursor = min(m.cursor, len(m.book.Contacts))
-			return m.saveContacts(statusOK, T("status.deleted", name))
-		}
-		c.Verified = true
-		return m.saveContacts(statusOK, T("status.verified", name))
-	case "n", "N", "esc":
-		m.confirm = confirmNone
+	default:
+		return nil
 	}
-	return nil
+	if kind == confirmRemovePassphrase {
+		return m.savePassphrase()
+	}
+	c := m.selected()
+	if c == nil {
+		return nil
+	}
+	name := c.Name
+	if kind == confirmDelete {
+		m.book.Remove(m.cursor)
+		m.cursor = min(m.cursor, len(m.book.Contacts))
+		return m.saveContacts(statusOK, T("status.deleted", name))
+	}
+	c.Verified = true
+	return m.saveContacts(statusOK, T("status.verified", name))
+}
+
+func (m *Model) savePassphrase() tea.Cmd {
+	old, passphrase, s, id, locked := m.old.Value(), m.pass.Value(), m.store, m.id, m.locked
+	return m.startBusy(T("busy.saving"), func() tea.Msg {
+		// Whoever sits at an unlocked session must not be able to replace or
+		// remove the passphrase without knowing it.
+		if locked {
+			if _, err := s.LoadIdentity(old); err != nil {
+				return identityMsg{kind: readyPassphraseChanged, err: err}
+			}
+		}
+		err := s.SaveIdentity(id, passphrase)
+		return identityMsg{kind: readyPassphraseChanged, id: id, locked: passphrase != "", err: err}
+	})
 }
 
 func (m *Model) selected() *store.Contact {
@@ -596,6 +655,14 @@ func (m *Model) selected() *store.Contact {
 
 func (m *Model) saveContacts(kind statusKind, text string) tea.Cmd {
 	if err := m.store.SaveContacts(m.book); err != nil {
+		if errors.Is(err, store.ErrContactsChanged) {
+			// Another hush process wrote the file. Show its state; the user
+			// repeats the change on top of it instead of overwriting it.
+			if book, lerr := m.store.LoadContacts(); lerr == nil {
+				m.book = book
+				m.cursor = min(m.cursor, len(book.Contacts))
+			}
+		}
 		return m.setStatus(statusErr, i18n.Err(err))
 	}
 	return m.setStatus(kind, text)
@@ -653,7 +720,8 @@ func (m *Model) showOpened(o *message.Opened) tea.Cmd {
 }
 
 func (m *Model) unknownSender() bool {
-	return m.opened != nil && m.opened.Sender != nil && m.book.ByKey(*m.opened.Sender) == nil
+	return m.opened != nil && m.opened.Sender != nil &&
+		*m.opened.Sender != m.id.Public() && m.book.ByKey(*m.opened.Sender) == nil
 }
 
 func (m *Model) startAdd(prefill string) tea.Cmd {
@@ -713,18 +781,25 @@ func (m *Model) copySecret(s string) tea.Cmd {
 		return m.setStatus(statusErr, T("status.clipboard_failed", err))
 	}
 	m.clipSecret = s
-	m.clipID++
-	id := m.clipID
 	return tea.Batch(
 		m.setStatus(statusOK, T("status.copied_secret", int(clipboardClearDelay.Seconds()))),
-		tea.Tick(clipboardClearDelay, func(time.Time) tea.Msg { return clipboardExpiredMsg{id: id} }),
+		m.clipTimer(clipboardClearDelay),
 	)
 }
 
-func (m Model) clearClipboard() {
-	if m.clipSecret != "" {
-		_ = clipClearIf(m.clipSecret)
+func (m *Model) clipTimer(d time.Duration) tea.Cmd {
+	m.clipID++
+	id := m.clipID
+	return tea.Tick(d, func(time.Time) tea.Msg { return clipboardExpiredMsg{id: id} })
+}
+
+// clearClipboard removes the copied secret unless the user has copied
+// something else since; cleared reports whether it did.
+func (m Model) clearClipboard() (cleared bool, err error) {
+	if m.clipSecret == "" {
+		return false, nil
 	}
+	return clipClearIf(m.clipSecret)
 }
 
 func (m *Model) setStatus(kind statusKind, text string) tea.Cmd {
@@ -735,6 +810,9 @@ func (m *Model) setStatus(kind statusKind, text string) tea.Cmd {
 }
 
 func (m *Model) setMode(md mode) {
+	if md != modeOpened {
+		m.opened = nil
+	}
 	m.mode = md
 	m.formErr = ""
 	m.confirm = confirmNone
@@ -748,14 +826,62 @@ func (m *Model) setMode(md mode) {
 	m.content.GotoTop()
 }
 
-func (m *Model) focusPass(i int) tea.Cmd {
-	m.focus = i
-	if i == 0 {
-		m.pass2.Blur()
-		return m.pass.Focus()
+// passFields returns the passphrase inputs of the current form in focus order.
+func (m *Model) passFields() []*textinput.Model {
+	switch {
+	case m.screen == screenUnlock:
+		return []*textinput.Model{&m.pass}
+	case m.screen == screenMain && m.locked:
+		return []*textinput.Model{&m.old, &m.pass, &m.pass2}
 	}
-	m.pass.Blur()
-	return m.pass2.Focus()
+	return []*textinput.Model{&m.pass, &m.pass2}
+}
+
+func (m *Model) focusPass(i int) tea.Cmd {
+	fields := m.passFields()
+	m.focus = (i + len(fields)) % len(fields)
+	for _, f := range fields {
+		f.Blur()
+	}
+	return fields[m.focus].Focus()
+}
+
+// takesPastedKey reports whether a key that arrived as part of a paste may be
+// handled. Only text typed into the focused input qualifies: anything else
+// would let the words around a pasted message act as commands, e.g. "v" and
+// "y" marking a contact as verified.
+func (m *Model) takesPastedKey(msg tea.KeyMsg) bool {
+	text := msg.Type == tea.KeyRunes || msg.Type == tea.KeySpace
+	switch {
+	case m.confirm != confirmNone:
+		return false
+	case m.screen != screenMain:
+		return text
+	case m.mode == modeCompose || m.mode == modePaste:
+		return text || msg.Type == tea.KeyEnter
+	case m.mode == modeAdd || m.mode == modeRename || m.mode == modePassphrase:
+		return text
+	}
+	return false
+}
+
+// joinSurrogates reassembles characters outside the Basic Multilingual Plane,
+// which Bubble Tea delivers on Windows as two UTF-16 halves. Each half on its
+// own would be stored as U+FFFD, silently changing a pasted password.
+func (m *Model) joinSurrogates(msg tea.KeyMsg) (tea.KeyMsg, bool) {
+	high := m.highSurrogate
+	m.highSurrogate = 0
+	if msg.Type != tea.KeyRunes || len(msg.Runes) != 1 {
+		return msg, true
+	}
+	switch r := msg.Runes[0]; {
+	case r >= 0xD800 && r < 0xDC00:
+		m.highSurrogate = r
+		return msg, false
+	case r >= 0xDC00 && r < 0xE000 && high != 0:
+		msg.Runes = []rune{utf16.DecodeRune(high, r)}
+	}
+	return msg, true
 }
 
 func (m *Model) focusAdd(i int) tea.Cmd {

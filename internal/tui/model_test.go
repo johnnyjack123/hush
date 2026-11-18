@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -27,11 +28,12 @@ func useFakeClipboard(t *testing.T) *fakeClipboard {
 	clipRead = func() (string, error) { return fc.text, nil }
 	clipWrite = func(s string) error { fc.text, fc.secret = s, false; return nil }
 	clipWriteSecret = func(s string) error { fc.text, fc.secret = s, true; return nil }
-	clipClearIf = func(s string) error {
-		if fc.text == s {
-			fc.text = ""
+	clipClearIf = func(s string) (bool, error) {
+		if fc.text != s {
+			return false, nil
 		}
-		return nil
+		fc.text = ""
+		return true, nil
 	}
 	t.Cleanup(func() { clipRead, clipWrite, clipWriteSecret, clipClearIf = oldRead, oldWrite, oldSecret, oldClear })
 	return fc
@@ -56,6 +58,9 @@ func newModel(t *testing.T, s *store.Store) Model {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Keys sent back to back would otherwise count as one paste.
+	clock := time.Unix(0, 0)
+	m.now = func() time.Time { clock = clock.Add(time.Second); return clock }
 	return send(m, tea.WindowSizeMsg{Width: 100, Height: 30})
 }
 

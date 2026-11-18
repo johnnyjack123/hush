@@ -75,6 +75,11 @@ var errorKeys = []struct {
 	{store.ErrEmptyName, "err.empty_name"},
 	{store.ErrDuplicateName, "err.duplicate_name"},
 	{store.ErrDuplicateKey, "err.duplicate_key"},
+	{store.ErrInvalidName, "err.invalid_name"},
+	{store.ErrContactsChanged, "err.contacts_changed"},
+	{store.ErrIdentityExists, "err.identity_exists"},
+	{store.ErrUnsafeDir, "err.unsafe_dir"},
+	{message.ErrNotText, "err.not_text"},
 	{keys.ErrInvalidPublicKey, "err.invalid_key"},
 	{message.ErrNoMessage, "err.no_message"},
 	{message.ErrNotForMe, "err.not_for_me"},
@@ -85,6 +90,16 @@ var errorKeys = []struct {
 
 // Err returns a user-facing description of err.
 func Err(err error) string {
+	// Checked first: it wraps errors such as an invalid key, and the user
+	// needs to know which file and entry to fix.
+	var ce *store.ContactsError
+	if errors.As(err, &ce) {
+		detail := Err(ce.Err)
+		if ce.Name != "" {
+			detail = fmt.Sprintf("%q: %s", ce.Name, detail)
+		}
+		return T("err.contacts_file", ce.Path, detail)
+	}
 	for _, e := range errorKeys {
 		if errors.Is(err, e.err) {
 			return T(e.key)

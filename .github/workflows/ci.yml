@@ -11,8 +11,9 @@ permissions:
 jobs:
   test:
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
@@ -21,3 +22,15 @@ jobs:
           go-version-file: go.mod
       - run: go vet ./...
       - run: go test ./...
+
+  # Hosted macOS runners are often unavailable for hours; macOS shares all
+  # non-Windows code paths with Linux, so checking that it compiles is enough.
+  macos-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - run: GOOS=darwin GOARCH=arm64 go vet ./...
+      - run: GOOS=darwin GOARCH=amd64 go build ./...

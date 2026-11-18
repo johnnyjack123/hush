@@ -1,0 +1,197 @@
+package i18n
+
+var en = map[string]string{
+	"app.tagline":        "encrypt text, safely",
+	"header.you":         "You",
+	"header.unprotected": "no passphrase",
+	"ui.too_small":       "Terminal too small – needs at least %d×%d characters.",
+
+	"fmt.date":     "2006-01-02",
+	"fmt.datetime": "2006-01-02 at 15:04",
+
+	"contacts.title": "Contacts",
+	"contacts.empty": "No contacts yet.",
+	"contacts.new":   "New contact",
+
+	"start.title":   "Getting started",
+	"start.heading": "How it works",
+	"start.step1":   "Press k and send your public key to your contact.",
+	"start.step2":   "Have your contact send you their key and add it with a.",
+	"start.step3":   "Compare your fingerprints over a second channel, e.g. a phone call, and confirm with v.",
+	"start.step4":   "Select the contact, press e and enter the text. The encrypted message lands on your clipboard.",
+	"start.step5":   "To read a message you received, copy it and press d.",
+
+	"contact.fingerprint": "Fingerprint",
+	"contact.status":      "Status",
+	"contact.added":       "Added",
+	"contact.public_key":  "Public key",
+	"contact.verified":    "verified",
+	"contact.unverified":  "not verified",
+	"contact.verify_hint": "Compare the fingerprint with %s over a second channel (e.g. a phone call), then press v.",
+
+	"compose.title":       "Message to %s",
+	"compose.hint":        "Will be encrypted for %s and signed by you.",
+	"compose.placeholder": "Type the text or password here …",
+
+	"sealed.title": "Encrypted for %s",
+	"sealed.done":  "Encrypted and copied to the clipboard.",
+	"sealed.hint":  "Paste the message into Telegram or any messenger now. Only %s can read it.",
+
+	"paste.title":       "Decrypt a message",
+	"paste.hint":        "Paste the encrypted message (right click or Ctrl+V). It is detected automatically.",
+	"paste.placeholder": "-----BEGIN AGE ENCRYPTED FILE----- …",
+
+	"opened.title":           "Decrypted message",
+	"opened.signed_verified": "Signed by %s (verified)",
+	"opened.signed":          "Signed by %s",
+	"opened.not_verified":    "This contact's fingerprint has not been verified yet.",
+	"opened.unknown_sender":  "Valid signature, but the sender is not in your contacts.",
+	"opened.unsigned":        "Not signed – the sender is unknown (e.g. encrypted with the age CLI).",
+	"opened.sent_at":         "Sent %s",
+
+	"mykey.title":       "My key",
+	"mykey.intro":       "Your public key. Send it to your contacts – it is not secret.",
+	"mykey.passphrase":  "Passphrase",
+	"mykey.protected":   "enabled",
+	"mykey.unprotected": "none – the private key is stored unencrypted on disk",
+	"mykey.location":    "Location",
+	"mykey.age_hint":    "age recipient (for the plain age CLI, without signature):",
+
+	"add.title":            "New contact",
+	"add.name":             "Name",
+	"add.name_placeholder": "e.g. Alice",
+	"add.key":              "Public key",
+	"add.key_valid":        "Valid key",
+	"add.hint":             "Your contact finds their key in hush under k (My key).",
+
+	"rename.title": "Rename contact",
+
+	"pass.title":       "Change passphrase",
+	"pass.change_hint": "Leave empty to remove passphrase protection.",
+	"pass.new":         "Passphrase",
+	"pass.repeat":      "Repeat passphrase",
+	"pass.mismatch":    "The passphrases do not match.",
+
+	"setup.title":           "Welcome to hush",
+	"setup.intro":           "hush encrypts text so you can safely send things like passwords over a messenger.",
+	"setup.keys":            "First, your personal key pair is created. The private key never leaves this device.",
+	"setup.passphrase_hint": "Protect it with a passphrase (recommended). Leave empty for no protection.",
+
+	"unlock.title":      "Unlock hush",
+	"unlock.intro":      "Your key is protected by a passphrase.",
+	"unlock.passphrase": "Passphrase",
+
+	"busy.creating":  "Creating keys …",
+	"busy.unlocking": "Unlocking …",
+	"busy.saving":    "Saving …",
+
+	"help.title":    "Help",
+	"help.keys":     "Keys",
+	"help.select":   "Select contact",
+	"help.encrypt":  "Encrypt a message to the contact",
+	"help.decrypt":  "Decrypt a message (reads the clipboard)",
+	"help.add":      "Add contact",
+	"help.verify":   "Mark fingerprint as verified",
+	"help.rename":   "Rename contact",
+	"help.delete":   "Delete contact",
+	"help.mykey":    "Show your own key",
+	"help.back":     "Back",
+	"help.quit":     "Quit",
+	"help.security": "Security",
+	"help.sec1":     "Messages are encrypted with age (X25519) and signed with Ed25519.",
+	"help.sec2":     "Your private key never leaves this device.",
+	"help.sec3":     "Copied plain text is removed from the clipboard after 30 seconds.",
+	"help.sec4":     "Verify fingerprints over a second channel, e.g. a phone call.",
+
+	"confirm.delete": "Really delete %s?",
+	"confirm.verify": "Did you compare fingerprint %[2]s with %[1]s?",
+
+	"key.yes":         "yes",
+	"key.yes_key":     "y",
+	"key.no":          "no",
+	"key.select":      "select",
+	"key.encrypt":     "encrypt",
+	"key.decrypt":     "decrypt",
+	"key.add":         "add",
+	"key.mykey":       "my key",
+	"key.help":        "help",
+	"key.quit":        "quit",
+	"key.cancel":      "cancel",
+	"key.back":        "back",
+	"key.copy_again":  "copy again",
+	"key.copy_secret": "copy plain text",
+	"key.copy_key":    "copy key",
+	"key.passphrase":  "change passphrase",
+	"key.scroll":      "scroll",
+	"key.save":        "save",
+	"key.next_field":  "next field",
+	"key.create":      "create keys",
+	"key.unlock":      "unlock",
+	"key.verify":      "verify",
+	"key.rename":      "rename",
+	"key.delete":      "delete",
+	"key.save_sender": "save sender as contact",
+
+	"status.keys_created":           "Key pair created. Now send your public key to your contacts.",
+	"status.passphrase_set":         "Passphrase saved.",
+	"status.passphrase_removed":     "Passphrase removed – the private key is now stored unencrypted on disk.",
+	"status.copied_message":         "Message copied to the clipboard.",
+	"status.copied_key":             "Public key copied to the clipboard.",
+	"status.copied_secret":          "Plain text copied – it will be cleared from the clipboard in %d seconds.",
+	"status.clipboard_cleared":      "Clipboard cleared.",
+	"status.clipboard_failed":       "Clipboard not available: %v",
+	"status.clipboard_not_openable": "Message on the clipboard: %s",
+	"status.select_contact":         "Select a contact first.",
+	"status.empty_message":          "Please enter some text first.",
+	"status.sealed":                 "Encrypted for %s and copied – paste it into your messenger now.",
+	"status.decrypted":              "Message decrypted.",
+	"status.added":                  "%s added. Now compare the fingerprint and confirm with v.",
+	"status.renamed":                "Renamed to %s.",
+	"status.deleted":                "%s deleted.",
+	"status.verified":               "%s is now verified.",
+	"status.unverified":             "%s is no longer marked as verified.",
+
+	"err.wrong_passphrase":    "Wrong passphrase.",
+	"err.passphrase_required": "Passphrase required.",
+	"err.no_identity":         "No key pair yet – start hush or run \"hush init\".",
+	"err.empty_name":          "Please enter a name.",
+	"err.duplicate_name":      "A contact with this name already exists.",
+	"err.duplicate_key":       "This key already belongs to another contact.",
+	"err.invalid_key":         "Not a valid hush key.",
+	"err.own_key":             "That is your own key.",
+	"err.no_message":          "No encrypted message found.",
+	"err.not_for_me":          "This message is not encrypted for you.",
+	"err.bad_signature":       "Invalid signature – the message was not sent by the claimed sender. Do not trust it!",
+	"err.corrupt":             "The message is damaged or incomplete.",
+	"err.too_long":            "The text is too long.",
+
+	"cli.usage": `hush – encrypt text safely, e.g. to send passwords over a messenger.
+
+Usage:
+  hush                          Start the interactive interface
+  hush encrypt <contact>        Encrypt text for a contact (from stdin or prompt)
+  hush decrypt                  Decrypt a message (from stdin or the clipboard)
+  hush key                      Print your public key
+  hush contacts                 List contacts
+  hush add <name> <key>         Add a contact
+  hush init [--no-passphrase]   Create your key pair
+  hush version                  Show the version
+
+Data:     %s (override with HUSH_HOME)
+Language: HUSH_LANG=en or HUSH_LANG=de
+`,
+	"cli.unknown_command":   "Unknown command: %s",
+	"cli.unknown_contact":   "No contact named \"%s\".",
+	"cli.usage_encrypt":     "Usage: hush encrypt <contact>",
+	"cli.usage_add":         "Usage: hush add <name> <key>",
+	"cli.usage_init":        "Usage: hush init [--no-passphrase]",
+	"cli.enter_text":        "Text (input hidden): ",
+	"cli.empty_input":       "No input.",
+	"cli.passphrase":        "Passphrase: ",
+	"cli.passphrase_new":    "Passphrase (empty = no protection): ",
+	"cli.passphrase_repeat": "Repeat passphrase: ",
+	"cli.identity_exists":   "A key pair already exists in %s.",
+	"cli.created":           "Key pair created. Your public key:",
+	"cli.added":             "%s added (fingerprint %s).",
+	"cli.no_tty":            "No terminal available for input.",
+}

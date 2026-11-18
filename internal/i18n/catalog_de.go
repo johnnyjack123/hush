@@ -1,0 +1,197 @@
+package i18n
+
+var de = map[string]string{
+	"app.tagline":        "Texte sicher verschlüsseln",
+	"header.you":         "Du",
+	"header.unprotected": "ohne Passphrase",
+	"ui.too_small":       "Terminal zu klein – mindestens %d×%d Zeichen.",
+
+	"fmt.date":     "02.01.2006",
+	"fmt.datetime": "02.01.2006 um 15:04 Uhr",
+
+	"contacts.title": "Kontakte",
+	"contacts.empty": "Noch keine Kontakte.",
+	"contacts.new":   "Neuer Kontakt",
+
+	"start.title":   "Los geht's",
+	"start.heading": "So funktioniert's",
+	"start.step1":   "Drücke k und schicke deinen öffentlichen Schlüssel an deinen Kontakt.",
+	"start.step2":   "Lass dir den Schlüssel deines Kontakts schicken und füge ihn mit a hinzu.",
+	"start.step3":   "Gleicht eure Fingerprints über einen zweiten Kanal ab, z. B. per Anruf, und bestätige mit v.",
+	"start.step4":   "Wähle den Kontakt, drücke e und gib den Text ein. Die verschlüsselte Nachricht landet in der Zwischenablage.",
+	"start.step5":   "Empfangene Nachricht kopieren und d drücken – fertig.",
+
+	"contact.fingerprint": "Fingerprint",
+	"contact.status":      "Status",
+	"contact.added":       "Hinzugefügt",
+	"contact.public_key":  "Öffentlicher Schlüssel",
+	"contact.verified":    "verifiziert",
+	"contact.unverified":  "nicht verifiziert",
+	"contact.verify_hint": "Vergleiche den Fingerprint mit %s über einen zweiten Kanal (z. B. per Anruf) und drücke dann v.",
+
+	"compose.title":       "Nachricht an %s",
+	"compose.hint":        "Wird für %s verschlüsselt und von dir signiert.",
+	"compose.placeholder": "Text oder Passwort hier eingeben …",
+
+	"sealed.title": "Verschlüsselt für %s",
+	"sealed.done":  "Verschlüsselt und in die Zwischenablage kopiert.",
+	"sealed.hint":  "Füge die Nachricht jetzt z. B. in Telegram ein. Nur %s kann sie lesen.",
+
+	"paste.title":       "Nachricht entschlüsseln",
+	"paste.hint":        "Füge die verschlüsselte Nachricht ein (Rechtsklick oder Strg+V). Sie wird automatisch erkannt.",
+	"paste.placeholder": "-----BEGIN AGE ENCRYPTED FILE----- …",
+
+	"opened.title":           "Entschlüsselte Nachricht",
+	"opened.signed_verified": "Signiert von %s (verifiziert)",
+	"opened.signed":          "Signiert von %s",
+	"opened.not_verified":    "Der Fingerprint dieses Kontakts ist noch nicht verifiziert.",
+	"opened.unknown_sender":  "Gültige Signatur, aber der Absender ist nicht in deinen Kontakten.",
+	"opened.unsigned":        "Nicht signiert – der Absender ist unbekannt (z. B. mit dem age-CLI verschlüsselt).",
+	"opened.sent_at":         "Gesendet am %s",
+
+	"mykey.title":       "Mein Schlüssel",
+	"mykey.intro":       "Dein öffentlicher Schlüssel. Schick ihn an deine Kontakte – er ist nicht geheim.",
+	"mykey.passphrase":  "Passphrase",
+	"mykey.protected":   "aktiv",
+	"mykey.unprotected": "keine – der private Schlüssel liegt unverschlüsselt auf der Festplatte",
+	"mykey.location":    "Speicherort",
+	"mykey.age_hint":    "age-Empfänger (für das normale age-CLI, ohne Signatur):",
+
+	"add.title":            "Neuer Kontakt",
+	"add.name":             "Name",
+	"add.name_placeholder": "z. B. Alice",
+	"add.key":              "Öffentlicher Schlüssel",
+	"add.key_valid":        "Gültiger Schlüssel",
+	"add.hint":             "Dein Kontakt findet den Schlüssel in hush unter k (Mein Schlüssel).",
+
+	"rename.title": "Kontakt umbenennen",
+
+	"pass.title":       "Passphrase ändern",
+	"pass.change_hint": "Leer lassen, um den Passphrase-Schutz zu entfernen.",
+	"pass.new":         "Passphrase",
+	"pass.repeat":      "Passphrase wiederholen",
+	"pass.mismatch":    "Die Passphrasen stimmen nicht überein.",
+
+	"setup.title":           "Willkommen bei hush",
+	"setup.intro":           "hush verschlüsselt Texte, damit du z. B. Passwörter sicher per Messenger verschicken kannst.",
+	"setup.keys":            "Zuerst wird dein persönliches Schlüsselpaar erzeugt. Der private Schlüssel bleibt nur auf diesem Gerät.",
+	"setup.passphrase_hint": "Schütze ihn mit einer Passphrase (empfohlen). Leer lassen = kein Schutz.",
+
+	"unlock.title":      "hush entsperren",
+	"unlock.intro":      "Dein Schlüssel ist mit einer Passphrase geschützt.",
+	"unlock.passphrase": "Passphrase",
+
+	"busy.creating":  "Schlüssel werden erzeugt …",
+	"busy.unlocking": "Entsperre …",
+	"busy.saving":    "Speichere …",
+
+	"help.title":    "Hilfe",
+	"help.keys":     "Tastenkürzel",
+	"help.select":   "Kontakt auswählen",
+	"help.encrypt":  "Nachricht an Kontakt verschlüsseln",
+	"help.decrypt":  "Nachricht entschlüsseln (liest die Zwischenablage)",
+	"help.add":      "Kontakt hinzufügen",
+	"help.verify":   "Fingerprint als verifiziert markieren",
+	"help.rename":   "Kontakt umbenennen",
+	"help.delete":   "Kontakt löschen",
+	"help.mykey":    "Eigenen Schlüssel anzeigen",
+	"help.back":     "Zurück",
+	"help.quit":     "Beenden",
+	"help.security": "Sicherheit",
+	"help.sec1":     "Nachrichten werden mit age (X25519) verschlüsselt und mit Ed25519 signiert.",
+	"help.sec2":     "Dein privater Schlüssel verlässt nie dieses Gerät.",
+	"help.sec3":     "Kopierter Klartext wird nach 30 Sekunden aus der Zwischenablage gelöscht.",
+	"help.sec4":     "Prüfe Fingerprints über einen zweiten Kanal, z. B. per Anruf.",
+
+	"confirm.delete": "%s wirklich löschen?",
+	"confirm.verify": "Hast du den Fingerprint %[2]s mit %[1]s abgeglichen?",
+
+	"key.yes":         "ja",
+	"key.yes_key":     "j",
+	"key.no":          "nein",
+	"key.select":      "auswählen",
+	"key.encrypt":     "verschlüsseln",
+	"key.decrypt":     "entschlüsseln",
+	"key.add":         "hinzufügen",
+	"key.mykey":       "mein Schlüssel",
+	"key.help":        "Hilfe",
+	"key.quit":        "beenden",
+	"key.cancel":      "abbrechen",
+	"key.back":        "zurück",
+	"key.copy_again":  "erneut kopieren",
+	"key.copy_secret": "Klartext kopieren",
+	"key.copy_key":    "Schlüssel kopieren",
+	"key.passphrase":  "Passphrase ändern",
+	"key.scroll":      "scrollen",
+	"key.save":        "speichern",
+	"key.next_field":  "nächstes Feld",
+	"key.create":      "Schlüssel erzeugen",
+	"key.unlock":      "entsperren",
+	"key.verify":      "verifizieren",
+	"key.rename":      "umbenennen",
+	"key.delete":      "löschen",
+	"key.save_sender": "Absender als Kontakt speichern",
+
+	"status.keys_created":           "Schlüsselpaar erzeugt. Schick jetzt deinen öffentlichen Schlüssel an deine Kontakte.",
+	"status.passphrase_set":         "Passphrase gespeichert.",
+	"status.passphrase_removed":     "Passphrase entfernt – der private Schlüssel liegt jetzt unverschlüsselt auf der Festplatte.",
+	"status.copied_message":         "Nachricht in die Zwischenablage kopiert.",
+	"status.copied_key":             "Öffentlicher Schlüssel in die Zwischenablage kopiert.",
+	"status.copied_secret":          "Klartext kopiert – wird in %d Sekunden aus der Zwischenablage gelöscht.",
+	"status.clipboard_cleared":      "Zwischenablage geleert.",
+	"status.clipboard_failed":       "Zwischenablage nicht verfügbar: %v",
+	"status.clipboard_not_openable": "Nachricht in der Zwischenablage: %s",
+	"status.select_contact":         "Wähle zuerst einen Kontakt aus.",
+	"status.empty_message":          "Bitte gib zuerst einen Text ein.",
+	"status.sealed":                 "Für %s verschlüsselt und kopiert – jetzt im Messenger einfügen.",
+	"status.decrypted":              "Nachricht entschlüsselt.",
+	"status.added":                  "%s hinzugefügt. Gleiche jetzt den Fingerprint ab und bestätige mit v.",
+	"status.renamed":                "Umbenannt in %s.",
+	"status.deleted":                "%s gelöscht.",
+	"status.verified":               "%s ist jetzt verifiziert.",
+	"status.unverified":             "%s ist nicht mehr als verifiziert markiert.",
+
+	"err.wrong_passphrase":    "Falsche Passphrase.",
+	"err.passphrase_required": "Passphrase erforderlich.",
+	"err.no_identity":         "Noch kein Schlüsselpaar vorhanden – starte hush oder führe „hush init“ aus.",
+	"err.empty_name":          "Bitte gib einen Namen ein.",
+	"err.duplicate_name":      "Es gibt bereits einen Kontakt mit diesem Namen.",
+	"err.duplicate_key":       "Dieser Schlüssel gehört bereits zu einem anderen Kontakt.",
+	"err.invalid_key":         "Kein gültiger hush-Schlüssel.",
+	"err.own_key":             "Das ist dein eigener Schlüssel.",
+	"err.no_message":          "Keine verschlüsselte Nachricht gefunden.",
+	"err.not_for_me":          "Diese Nachricht ist nicht für dich verschlüsselt.",
+	"err.bad_signature":       "Signatur ungültig – die Nachricht stammt nicht vom angegebenen Absender. Nicht vertrauen!",
+	"err.corrupt":             "Die Nachricht ist beschädigt oder unvollständig.",
+	"err.too_long":            "Der Text ist zu lang.",
+
+	"cli.usage": `hush – Texte sicher verschlüsseln, z. B. um Passwörter per Messenger zu verschicken.
+
+Verwendung:
+  hush                          Interaktive Oberfläche starten
+  hush encrypt <kontakt>        Text für einen Kontakt verschlüsseln (von stdin oder per Eingabe)
+  hush decrypt                  Nachricht entschlüsseln (von stdin oder aus der Zwischenablage)
+  hush key                      Eigenen öffentlichen Schlüssel ausgeben
+  hush contacts                 Kontakte auflisten
+  hush add <name> <schlüssel>   Kontakt hinzufügen
+  hush init [--no-passphrase]   Schlüsselpaar erzeugen
+  hush version                  Version anzeigen
+
+Daten:   %s (änderbar über HUSH_HOME)
+Sprache: HUSH_LANG=de oder HUSH_LANG=en
+`,
+	"cli.unknown_command":   "Unbekannter Befehl: %s",
+	"cli.unknown_contact":   "Kein Kontakt namens „%s“.",
+	"cli.usage_encrypt":     "Verwendung: hush encrypt <kontakt>",
+	"cli.usage_add":         "Verwendung: hush add <name> <schlüssel>",
+	"cli.usage_init":        "Verwendung: hush init [--no-passphrase]",
+	"cli.enter_text":        "Text (Eingabe verborgen): ",
+	"cli.empty_input":       "Keine Eingabe.",
+	"cli.passphrase":        "Passphrase: ",
+	"cli.passphrase_new":    "Passphrase (leer = kein Schutz): ",
+	"cli.passphrase_repeat": "Passphrase wiederholen: ",
+	"cli.identity_exists":   "In %s existiert bereits ein Schlüsselpaar.",
+	"cli.created":           "Schlüsselpaar erzeugt. Dein öffentlicher Schlüssel:",
+	"cli.added":             "%s hinzugefügt (Fingerprint %s).",
+	"cli.no_tty":            "Kein Terminal für die Eingabe verfügbar.",
+}

@@ -244,7 +244,7 @@ func TestOwnSignatureAndLeftoverPlaintext(t *testing.T) {
 	clipboard := useFakeClipboard(t)
 	s, id := newStoreWithIdentity(t)
 	m := newModel(t, s)
-	sealed, err := message.Seal("note to self", id, id.Public(), time.Now())
+	sealed, err := message.Seal("note to self", id, []keys.PublicKey{id.Public()}, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}

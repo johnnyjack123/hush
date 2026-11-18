@@ -25,7 +25,7 @@ func mustIdentity(t *testing.T) *keys.Identity {
 func TestSealOpen(t *testing.T) {
 	alice, bob := mustIdentity(t), mustIdentity(t)
 	now := time.Unix(1_800_000_000, 0)
-	sealed, err := Seal("hunter2 – äöü 🔑", alice, bob.Public(), now)
+	sealed, err := Seal("hunter2 – äöü 🔑", alice, []keys.PublicKey{bob.Public()}, now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func TestSealOpen(t *testing.T) {
 
 func TestOpenWrongRecipient(t *testing.T) {
 	alice, bob, eve := mustIdentity(t), mustIdentity(t), mustIdentity(t)
-	sealed, _ := Seal("secret", alice, bob.Public(), time.Now())
+	sealed, _ := Seal("secret", alice, []keys.PublicKey{bob.Public()}, time.Now())
 	if _, err := Open(sealed, eve); !errors.Is(err, ErrNotForMe) {
 		t.Fatalf("err = %v, want ErrNotForMe", err)
 	}
@@ -58,7 +58,7 @@ func TestOpenWrongRecipient(t *testing.T) {
 func TestForwardedMessageFailsVerification(t *testing.T) {
 	alice, bob, carol := mustIdentity(t), mustIdentity(t), mustIdentity(t)
 	// Bob decrypts Alice's envelope and re-encrypts it unchanged to Carol.
-	payload := envelope("for bob only", alice, bob.Public(), time.Now())
+	payload := envelope("for bob only", alice, []keys.PublicKey{bob.Public()}, time.Now())
 	var buf bytes.Buffer
 	aw := armor.NewWriter(&buf)
 	w, _ := age.Encrypt(aw, carol.Public().Recipient())
@@ -72,7 +72,7 @@ func TestForwardedMessageFailsVerification(t *testing.T) {
 
 func TestForgedSenderFailsVerification(t *testing.T) {
 	alice, bob, mallory := mustIdentity(t), mustIdentity(t), mustIdentity(t)
-	payload := envelope("pay mallory", mallory, bob.Public(), time.Now())
+	payload := envelope("pay mallory", mallory, []keys.PublicKey{bob.Public()}, time.Now())
 	// Claim to be Alice while keeping Mallory's signature.
 	copy(payload[len(magic)+1:], alice.Public().Bytes())
 	var buf bytes.Buffer
@@ -105,8 +105,8 @@ func TestOpenPlainAgeMessage(t *testing.T) {
 
 func TestPaddingHidesLength(t *testing.T) {
 	alice, bob := mustIdentity(t), mustIdentity(t)
-	short, _ := Seal("a", alice, bob.Public(), time.Now())
-	long, _ := Seal(strings.Repeat("x", 100), alice, bob.Public(), time.Now())
+	short, _ := Seal("a", alice, []keys.PublicKey{bob.Public()}, time.Now())
+	long, _ := Seal(strings.Repeat("x", 100), alice, []keys.PublicKey{bob.Public()}, time.Now())
 	if len(short) != len(long) {
 		t.Fatalf("lengths differ: %d vs %d", len(short), len(long))
 	}
@@ -114,7 +114,7 @@ func TestPaddingHidesLength(t *testing.T) {
 
 func TestOpenToleratesMessengerMangling(t *testing.T) {
 	alice, bob := mustIdentity(t), mustIdentity(t)
-	sealed, _ := Seal("pw", alice, bob.Public(), time.Now())
+	sealed, _ := Seal("pw", alice, []keys.PublicKey{bob.Public()}, time.Now())
 	lines := strings.Split(sealed, "\n")
 
 	variants := map[string]string{
@@ -143,7 +143,7 @@ func TestOpenErrors(t *testing.T) {
 	if _, err := Open("just some text", bob); !errors.Is(err, ErrNoMessage) {
 		t.Errorf("plain text: err = %v", err)
 	}
-	sealed, _ := Seal("pw", alice, bob.Public(), time.Now())
+	sealed, _ := Seal("pw", alice, []keys.PublicKey{bob.Public()}, time.Now())
 	lines := strings.Split(sealed, "\n")
 	mid := []byte(lines[3])
 	if mid[10] == 'A' {
@@ -181,7 +181,7 @@ func TestOpenRejectsOversizedPlainAgeMessage(t *testing.T) {
 
 func TestSealRejectsInvalidUTF8(t *testing.T) {
 	alice, bob := mustIdentity(t), mustIdentity(t)
-	if _, err := Seal("caf\xe9", alice, bob.Public(), time.Now()); !errors.Is(err, ErrNotText) {
+	if _, err := Seal("caf\xe9", alice, []keys.PublicKey{bob.Public()}, time.Now()); !errors.Is(err, ErrNotText) {
 		t.Fatalf("err = %v, want ErrNotText", err)
 	}
 }

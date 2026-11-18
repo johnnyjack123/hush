@@ -15,6 +15,7 @@ import (
 	"github.com/johnnyjack123/hush/internal/keys"
 	"github.com/johnnyjack123/hush/internal/message"
 	"github.com/johnnyjack123/hush/internal/store"
+	"github.com/johnnyjack123/hush/internal/termsafe"
 )
 
 var catalogs = map[string]map[string]string{
@@ -83,6 +84,7 @@ var errorKeys = []struct {
 	{store.ErrDeviceKeyMissing, "err.device_key_missing"},
 	{store.ErrDeviceStale, "err.device_stale"},
 	{message.ErrNotText, "err.not_text"},
+	{message.ErrRecipients, "err.recipients"},
 	{keys.ErrInvalidPublicKey, "err.invalid_key"},
 	{message.ErrNoMessage, "err.no_message"},
 	{message.ErrNotForMe, "err.not_for_me"},
@@ -109,4 +111,21 @@ func Err(err error) string {
 		}
 	}
 	return err.Error()
+}
+
+// OtherRecipients names the recipients of a message other than me: contacts
+// by name, anyone else by the short form of their fingerprint.
+func OtherRecipients(b *store.Book, all []keys.PublicKey, me keys.PublicKey) string {
+	var names []string
+	for _, pk := range all {
+		if pk == me {
+			continue
+		}
+		if c := b.ByKey(pk); c != nil {
+			names = append(names, termsafe.Line(c.Name))
+		} else {
+			names = append(names, T("opened.unknown_recipient", pk.Fingerprint().Short()))
+		}
+	}
+	return strings.Join(names, ", ")
 }

@@ -168,7 +168,7 @@ var de = map[string]string{
 
 Verwendung:
   hush                          Interaktive Oberfläche starten
-  hush encrypt <kontakt>        Text für einen Kontakt verschlüsseln (von stdin oder per Eingabe)
+  hush encrypt <kontakt>…       Text für Kontakte verschlüsseln (von stdin oder per Eingabe)
   hush decrypt                  Nachricht entschlüsseln (von stdin oder aus der Zwischenablage)
   hush key                      Eigenen öffentlichen Schlüssel ausgeben
   hush contacts                 Kontakte auflisten
@@ -183,7 +183,7 @@ Sprache: HUSH_LANG=de oder HUSH_LANG=en
 `,
 	"cli.unknown_command":   "Unbekannter Befehl: %s",
 	"cli.unknown_contact":   "Kein Kontakt namens „%s“.",
-	"cli.usage_encrypt":     "Verwendung: hush encrypt <kontakt>",
+	"cli.usage_encrypt":     "Verwendung: hush encrypt <kontakt> [<kontakt> …]",
 	"cli.usage_add":         "Verwendung: hush add <name> <schlüssel>",
 	"cli.usage_init":        "Verwendung: hush init [--no-passphrase]",
 	"cli.enter_text":        "Text (Eingabe verborgen): ",
@@ -229,4 +229,13 @@ Sprache: HUSH_LANG=de oder HUSH_LANG=en
 	"err.device_stale":            "Die gemerkte Kopie passt nicht mehr zu identity.key. Entsperre mit der Passphrase und lass dir das Gerät neu merken.",
 	"cli.usage_remember":          "Verwendung: hush remember",
 	"cli.usage_forget":            "Verwendung: hush forget",
+
+	"status.marked":            "Markiert: %d – e verschlüsselt für alle markierten Kontakte, esc hebt die Markierung auf.",
+	"status.unmarked":          "Keine Kontakte mehr markiert.",
+	"key.mark":                 "markieren",
+	"help.mark":                "Kontakt markieren – e verschlüsselt dann für alle markierten",
+	"opened.also_to":           "Auch an: %s",
+	"opened.unknown_recipient": "unbekannt (%s)",
+	"sealed.hint_many":         "Füge die Nachricht jetzt z. B. in Telegram ein. Nur %s können sie lesen.",
+	"err.recipients":           "Ungültige Empfängerliste: höchstens 64 Empfänger, keiner doppelt.",
 }

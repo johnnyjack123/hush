@@ -32,7 +32,8 @@ Nachricht, damit der Empfänger weiß, dass sie wirklich von dir kommt.
 4. Ihr vergleicht einmal beide **Fingerprints** vollständig (z. B. `7F3A-91C2-04BE-1D77-A0C3-5E19`) über einen zweiten Kanal,
    etwa per Anruf – hush zeigt beide auf Alices Kontaktseite. Stimmen sie, markierst du Alice mit `v` als verifiziert.
 5. Kontakt wählen, `e` drücken, Passwort eingeben, `Strg+S`. Die verschlüsselte Nachricht liegt
-   jetzt in der Zwischenablage – einfach in Telegram einfügen.
+   jetzt in der Zwischenablage – einfach in Telegram einfügen. Für eine Gruppe vorher mehrere Kontakte
+   mit der `Leertaste` markieren; jeder davon kann dieselbe Nachricht öffnen.
 6. Alice kopiert die Nachricht und drückt in hush `d`. hush erkennt die Nachricht in der
    Zwischenablage, entschlüsselt sie und zeigt, dass sie von dir signiert ist.
 
@@ -63,7 +64,8 @@ go install github.com/johnnyjack123/hush@latest
 | `v`         | Fingerprint als verifiziert markieren               |
 | `r` / `x`   | Kontakt umbenennen / löschen                        |
 | `k`         | Eigener Schlüssel: kopieren (`c`), Passphrase (`p`), Gerät merken (`m`) |
-| `esc`       | Zurück zur Kontaktliste                             |
+| `Leertaste` | Kontakte für eine Nachricht an mehrere markieren    |
+| `esc`       | Zurück zur Kontaktliste, Markierungen aufheben      |
 | `?`         | Hilfe                                               |
 | `q`         | Beenden                                             |
 
@@ -74,6 +76,7 @@ Für Skripte gibt es zusätzlich Unterbefehle:
 ```sh
 hush                              # Oberfläche starten
 echo "geheim" | hush encrypt alice > nachricht.txt
+echo "geheim" | hush encrypt alice bob    # eine Nachricht für mehrere Kontakte
 hush decrypt < nachricht.txt      # Klartext auf stdout, Absender-Prüfung auf stderr
 hush decrypt                      # ohne Eingabe: liest die Zwischenablage
 hush key                          # eigener öffentlicher Schlüssel
@@ -119,6 +122,10 @@ Zwischenablage-Verlauf (`Win+V`) und der Cloud-Synchronisierung ausgeschlossen; 
 Zwischenablage-Manager wie Klipper oder Maccy trotzdem eine eigene Kopie behalten. Die Oberfläche läuft im
 alternativen Bildschirm des Terminals, entschlüsselte Texte bleiben also nicht im Scroll-Verlauf stehen.
 
+**Mehrere Empfänger.** Eine Nachricht an mehrere Kontakte wird einmal für alle verschlüsselt. Die Signatur
+deckt die ganze Empfängerliste ab, niemand darauf kann sie also an Dritte weiterleiten, als wäre sie für diese
+bestimmt. Jeder Empfänger sieht, an wen die Nachricht noch ging.
+
 **Grenzen.** hush schützt nicht vor Schadsoftware auf deinem Rechner oder dem des Empfängers. Gegen
 Wiederholung einer alten Nachricht hilft nur der angezeigte Sendezeitpunkt.
 
@@ -163,7 +170,6 @@ go run ./tools/licenses
 ## Ideen für später
 
 - Android-App mit grafischer Oberfläche (die Schlüssel sind kompatibel)
-- Mehrere Empfänger pro Nachricht
 
 ## Lizenz
 

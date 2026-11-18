@@ -130,6 +130,11 @@ type Model struct {
 
 	cursor  int // index into book.Contacts; len(book.Contacts) is the "new contact" row
 	confirm confirmKind
+	// marked holds the contacts chosen with space for a message to several.
+	marked map[keys.PublicKey]bool
+	// composeTo is fixed when composing starts, so that the title and the
+	// sealed message always name the same recipients.
+	composeTo []store.Contact
 
 	compose textarea.Model
 	paste   textarea.Model
@@ -141,10 +146,11 @@ type Model struct {
 	focus   int
 	formErr string
 
-	sealed   string
-	sealedTo string
-	opened   *message.Opened
-	content  viewport.Model
+	sealed      string
+	sealedTo    string
+	sealedCount int
+	opened      *message.Opened
+	content     viewport.Model
 
 	spinner spinner.Model
 	busy    string
@@ -181,6 +187,7 @@ func New(s *store.Store) (Model, error) {
 		content: viewport.New(0, 0),
 		spinner: spinner.New(spinner.WithSpinner(spinner.MiniDot), spinner.WithStyle(sAccent)),
 		now:     time.Now,
+		marked:  map[keys.PublicKey]bool{},
 	}
 	m.name.CharLimit = 40
 
@@ -472,6 +479,7 @@ func (m *Model) updateMain(msg tea.KeyMsg) tea.Cmd {
 		switch k {
 		case "esc":
 			m.compose.Reset()
+			m.composeTo = nil
 			m.setMode(modeBrowse)
 			return nil
 		case "ctrl+s":
@@ -622,15 +630,36 @@ func (m *Model) updateBrowse(msg tea.KeyMsg) tea.Cmd {
 	case "end":
 		m.cursor = len(m.book.Contacts)
 	case "enter", "e":
-		if c == nil {
-			if msg.String() == "enter" {
-				return m.startAdd("")
-			}
+		if c == nil && msg.String() == "enter" {
+			return m.startAdd("")
+		}
+		to := m.recipients()
+		if len(to) == 0 {
 			return m.setStatus(statusWarn, T("status.select_contact"))
 		}
+		m.composeTo = to
 		m.setMode(modeCompose)
 		m.compose.Reset()
 		return m.compose.Focus()
+	case " ":
+		if c == nil {
+			return nil
+		}
+		pk := c.PublicKey()
+		if m.marked[pk] {
+			delete(m.marked, pk)
+		} else {
+			m.marked[pk] = true
+		}
+		if len(m.marked) == 0 {
+			return m.setStatus(statusInfo, T("status.unmarked"))
+		}
+		return m.setStatus(statusInfo, T("status.marked", len(m.marked)))
+	case "esc":
+		if len(m.marked) > 0 {
+			clear(m.marked)
+			return m.setStatus(statusInfo, T("status.unmarked"))
+		}
 	case "d":
 		return m.startOpen()
 	case "a":
@@ -683,6 +712,7 @@ func (m *Model) updateConfirm(msg tea.KeyMsg) tea.Cmd {
 	}
 	name := c.Name
 	if kind == confirmDelete {
+		delete(m.marked, c.PublicKey())
 		m.book.Remove(m.cursor)
 		m.cursor = min(m.cursor, len(m.book.Contacts))
 		return m.saveContacts(statusOK, T("status.deleted", name))
@@ -736,6 +766,11 @@ func (m *Model) saveContacts(kind statusKind, text string) tea.Cmd {
 			if book, lerr := m.store.LoadContacts(); lerr == nil {
 				m.book = book
 				m.cursor = min(m.cursor, len(book.Contacts))
+				for pk := range m.marked {
+					if book.ByKey(pk) == nil {
+						delete(m.marked, pk)
+					}
+				}
 			}
 		}
 		return m.setStatus(statusErr, i18n.Err(err))
@@ -744,23 +779,55 @@ func (m *Model) saveContacts(kind statusKind, text string) tea.Cmd {
 }
 
 func (m *Model) seal() tea.Cmd {
-	c := m.selected()
+	to := m.composeTo
 	// A trailing newline from pressing enter would otherwise end up in a pasted password.
 	text := strings.TrimRight(m.compose.Value(), "\r\n")
-	if c == nil || strings.TrimSpace(text) == "" {
+	if len(to) == 0 || strings.TrimSpace(text) == "" {
 		return m.setStatus(statusWarn, T("status.empty_message"))
 	}
-	sealed, err := message.Seal(text, m.id, c.PublicKey(), time.Now())
+	pks := make([]keys.PublicKey, len(to))
+	for i, c := range to {
+		pks[i] = c.PublicKey()
+	}
+	sealed, err := message.Seal(text, m.id, pks, time.Now())
 	if err != nil {
 		return m.setStatus(statusErr, i18n.Err(err))
 	}
+	names := contactNames(to)
 	m.compose.Reset()
-	m.sealed, m.sealedTo = sealed, c.Name
+	m.sealed, m.sealedTo, m.sealedCount = sealed, names, len(to)
+	m.composeTo = nil
+	clear(m.marked)
 	m.setMode(modeSealed)
 	if err := clipWrite(sealed); err != nil {
 		return m.setStatus(statusWarn, T("status.clipboard_failed", err))
 	}
-	return m.setStatus(statusOK, T("status.sealed", c.Name))
+	return m.setStatus(statusOK, T("status.sealed", names))
+}
+
+// recipients returns the marked contacts in list order, or else the
+// selected one.
+func (m *Model) recipients() []store.Contact {
+	var to []store.Contact
+	for _, c := range m.book.Contacts {
+		if m.marked[c.PublicKey()] {
+			to = append(to, c)
+		}
+	}
+	if len(to) == 0 {
+		if c := m.selected(); c != nil {
+			to = append(to, *c)
+		}
+	}
+	return to
+}
+
+func contactNames(cs []store.Contact) string {
+	names := make([]string, len(cs))
+	for i, c := range cs {
+		names[i] = c.Name
+	}
+	return strings.Join(names, ", ")
 }
 
 // startOpen decrypts straight from the clipboard when it holds a message,

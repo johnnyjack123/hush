@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -163,8 +164,7 @@ func cmdForget(args []string) error {
 }
 
 func cmdEncrypt(args []string) error {
-	name := strings.Join(args, " ")
-	if name == "" {
+	if len(args) == 0 {
 		return usageError("cli.usage_encrypt")
 	}
 	s, err := store.Open()
@@ -175,9 +175,9 @@ func cmdEncrypt(args []string) error {
 	if err != nil {
 		return err
 	}
-	i := book.Index(name)
-	if i < 0 {
-		return errors.New(T("cli.unknown_contact", name))
+	to, err := pickContacts(book, args)
+	if err != nil {
+		return err
 	}
 	id, err := loadIdentity(s)
 	if err != nil {
@@ -202,11 +202,31 @@ func cmdEncrypt(args []string) error {
 	if text == "" {
 		return errors.New(T("cli.empty_input"))
 	}
-	sealed, err := message.Seal(text, id, book.Contacts[i].PublicKey(), time.Now())
+	sealed, err := message.Seal(text, id, to, time.Now())
 	if err != nil {
 		return err
 	}
 	return out(sealed)
+}
+
+// pickContacts resolves each argument to a contact. Before hush supported
+// several recipients, all arguments formed one name ("hush encrypt Alice
+// Müller"), so that reading is kept when the single words are no contacts.
+func pickContacts(book *store.Book, args []string) ([]keys.PublicKey, error) {
+	var to []keys.PublicKey
+	for _, a := range args {
+		i := book.Index(a)
+		if i < 0 {
+			if j := book.Index(strings.Join(args, " ")); j >= 0 {
+				return []keys.PublicKey{book.Contacts[j].PublicKey()}, nil
+			}
+			return nil, errors.New(T("cli.unknown_contact", termsafe.Line(a)))
+		}
+		if pk := book.Contacts[i].PublicKey(); !slices.Contains(to, pk) {
+			to = append(to, pk)
+		}
+	}
+	return to, nil
 }
 
 func cmdDecrypt(args []string) error {
@@ -282,6 +302,9 @@ func reportSender(book *store.Book, me *keys.Identity, o *message.Opened) {
 	default:
 		fmt.Fprintln(os.Stderr, "✓ "+T("opened.signed", termsafe.Line(c.Name)))
 		fmt.Fprintln(os.Stderr, "⚠ "+T("opened.not_verified"))
+	}
+	if len(o.Recipients) > 1 {
+		fmt.Fprintln(os.Stderr, "  "+T("opened.also_to", i18n.OtherRecipients(book, o.Recipients, me.Public())))
 	}
 	// Only the time tells a replayed old message from a new one.
 	if !o.SentAt.IsZero() {

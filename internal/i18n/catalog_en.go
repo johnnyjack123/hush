@@ -168,7 +168,7 @@ var en = map[string]string{
 
 Usage:
   hush                          Start the interactive interface
-  hush encrypt <contact>        Encrypt text for a contact (from stdin or prompt)
+  hush encrypt <contact>…       Encrypt text for contacts (from stdin or prompt)
   hush decrypt                  Decrypt a message (from stdin or the clipboard)
   hush key                      Print your public key
   hush contacts                 List contacts
@@ -183,7 +183,7 @@ Language: HUSH_LANG=en or HUSH_LANG=de
 `,
 	"cli.unknown_command":   "Unknown command: %s",
 	"cli.unknown_contact":   "No contact named \"%s\".",
-	"cli.usage_encrypt":     "Usage: hush encrypt <contact>",
+	"cli.usage_encrypt":     "Usage: hush encrypt <contact> [<contact> …]",
 	"cli.usage_add":         "Usage: hush add <name> <key>",
 	"cli.usage_init":        "Usage: hush init [--no-passphrase]",
 	"cli.enter_text":        "Text (input hidden): ",
@@ -229,4 +229,13 @@ Language: HUSH_LANG=en or HUSH_LANG=de
 	"err.device_stale":            "The remembered copy no longer matches identity.key. Unlock with the passphrase and remember the device again.",
 	"cli.usage_remember":          "Usage: hush remember",
 	"cli.usage_forget":            "Usage: hush forget",
+
+	"status.marked":            "Marked: %d – e encrypts for all marked contacts, esc clears the marks.",
+	"status.unmarked":          "No contacts marked any more.",
+	"key.mark":                 "mark",
+	"help.mark":                "Mark a contact – e then encrypts for all marked ones",
+	"opened.also_to":           "Also to: %s",
+	"opened.unknown_recipient": "unknown (%s)",
+	"sealed.hint_many":         "Paste the message into Telegram or any messenger now. Only %s can read it.",
+	"err.recipients":           "Invalid list of recipients: at most 64, none twice.",
 }

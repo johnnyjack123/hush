@@ -67,12 +67,16 @@ func (m Model) viewContacts(w, h int) string {
 		if c.Verified {
 			mark = sOK.Render("✓")
 		}
-		nameW := w - 2 - 2 - len(fp) - 1
+		sel := " "
+		if m.marked[c.PublicKey()] {
+			sel = sAccent.Bold(true).Render("●")
+		}
+		nameW := w - 3 - 2 - len(fp) - 1
 		name := padRight(ansi.Truncate(c.Name, nameW, "…"), nameW)
 		if i == m.cursor {
-			rows = append(rows, sAccent.Bold(true).Render("▸ "+name)+" "+mark+" "+sAccent.Render(fp))
+			rows = append(rows, sAccent.Bold(true).Render("▸")+sel+" "+sAccent.Bold(true).Render(name)+" "+mark+" "+sAccent.Render(fp))
 		} else {
-			rows = append(rows, "  "+name+" "+mark+" "+sDim.Render(fp))
+			rows = append(rows, " "+sel+" "+name+" "+mark+" "+sDim.Render(fp))
 		}
 	}
 	if len(m.book.Contacts) == 0 {
@@ -82,9 +86,9 @@ func (m Model) viewContacts(w, h int) string {
 	}
 	newRow := "+ " + T("contacts.new")
 	if m.cursor == len(m.book.Contacts) {
-		rows = append(rows, sAccent.Bold(true).Render("▸ "+newRow))
+		rows = append(rows, sAccent.Bold(true).Render("▸  "+newRow))
 	} else {
-		rows = append(rows, sDim.Render("  "+newRow))
+		rows = append(rows, sDim.Render("   "+newRow))
 	}
 
 	// Keep the cursor row visible when the list is taller than the pane.
@@ -101,8 +105,8 @@ func (m Model) viewContacts(w, h int) string {
 func (m Model) viewRight(w, h int) (title, body string) {
 	switch m.mode {
 	case modeCompose:
-		c := m.selected()
-		return T("compose.title", c.Name), sDim.Render(T("compose.hint", c.Name)) + "\n\n" + m.compose.View()
+		names := contactNames(m.composeTo)
+		return T("compose.title", names), sDim.Render(T("compose.hint", names)) + "\n\n" + m.compose.View()
 	case modeSealed:
 		return T("sealed.title", m.sealedTo), m.content.View()
 	case modePaste:
@@ -148,7 +152,7 @@ func (m Model) viewContact(c *store.Contact, w int) string {
 			"")
 	}
 	lines = append(lines, keyHelp(
-		"e", T("key.encrypt"), "v", T("key.verify"), "r", T("key.rename"), "x", T("key.delete")))
+		"e", T("key.encrypt"), "space", T("key.mark"), "v", T("key.verify"), "r", T("key.rename"), "x", T("key.delete")))
 	return strings.Join(lines, "\n")
 }
 
@@ -212,8 +216,11 @@ func (m *Model) refreshContent() {
 	var s string
 	switch m.mode {
 	case modeSealed:
-		s = sOK.Render("✓ "+T("sealed.done")) + "\n" +
-			sDim.Render(T("sealed.hint", m.sealedTo)) + "\n\n" + sAccent.Render(fitArmor(m.sealed, w))
+		hint := T("sealed.hint", m.sealedTo)
+		if m.sealedCount > 1 {
+			hint = T("sealed.hint_many", m.sealedTo)
+		}
+		s = sOK.Render("✓ "+T("sealed.done")) + "\n" + sDim.Render(hint) + "\n\n" + sAccent.Render(fitArmor(m.sealed, w))
 	case modeOpened:
 		s = m.openedContent(w)
 	case modeMyKey:
@@ -253,6 +260,9 @@ func (m *Model) openedContent(w int) string {
 				sOK.Render("✓ "+T("opened.signed", c.Name)),
 				sWarn.Render("⚠ "+T("opened.not_verified")))
 		}
+	}
+	if len(o.Recipients) > 1 {
+		lines = append(lines, sDim.Render(T("opened.also_to", i18n.OtherRecipients(m.book, o.Recipients, m.id.Public()))))
 	}
 	if !o.SentAt.IsZero() {
 		lines = append(lines, sDim.Render(T("opened.sent_at", i18n.Time(o.SentAt))))
@@ -310,6 +320,7 @@ func helpContent(w int) string {
 	keysList := [][2]string{
 		{"↑ ↓", T("help.select")},
 		{"enter / e", T("help.encrypt")},
+		{"space", T("help.mark")},
 		{"d", T("help.decrypt")},
 		{"a", T("help.add")},
 		{"v", T("help.verify")},

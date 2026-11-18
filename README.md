@@ -33,7 +33,8 @@ recipient knows it really came from you.
    second channel, such as a phone call; hush shows both on Alice's contact page. If they match,
    mark Alice as verified with `v`.
 5. Pick the contact, press `e`, type the password, press `Ctrl+S`. The encrypted message is now
-   on the clipboard: just paste it into Telegram.
+   on the clipboard: just paste it into Telegram. For a group, mark several contacts with `space`
+   first; every one of them can open the same message.
 6. Alice copies the message and presses `d` in hush. hush finds the message on the clipboard,
    decrypts it and shows that it was signed by you.
 
@@ -65,7 +66,8 @@ go install github.com/johnnyjack123/hush@latest
 | `v`         | Mark the fingerprint as verified                 |
 | `r` / `x`   | Rename / delete a contact                        |
 | `k`         | Your key: copy (`c`), passphrase (`p`), remember device (`m`) |
-| `esc`       | Back to the contact list                         |
+| `space`     | Mark contacts for a message to several            |
+| `esc`       | Back to the contact list, clear marks            |
 | `?`         | Help                                             |
 | `q`         | Quit                                             |
 
@@ -76,6 +78,7 @@ For scripts there are subcommands as well:
 ```sh
 hush                              # start the interface
 echo "secret" | hush encrypt alice > message.txt
+echo "secret" | hush encrypt alice bob    # one message for several contacts
 hush decrypt < message.txt        # plain text on stdout, sender check on stderr
 hush decrypt                      # no input: reads the clipboard
 hush key                          # your own public key
@@ -120,6 +123,10 @@ the clipboard history (`Win+V`) and cloud sync; on Linux and macOS, clipboard ma
 Klipper or Maccy may still keep their own copy. The interface runs in the terminal's alternate
 screen, so decrypted text does not remain in the scrollback.
 
+**Several recipients.** A message for several contacts is encrypted once to all of them. The
+signature covers the whole list, so nobody on it can forward the message to someone else as if it
+had been meant for them. Every recipient sees who else received it.
+
 **Limits.** hush does not protect against malware on your machine or the recipient's. Against the
 replay of an old message, only the displayed send time helps.
 
@@ -163,7 +170,6 @@ go run ./tools/licenses
 ## Ideas for later
 
 - Android app with a graphical interface (the keys are compatible)
-- Several recipients per message
 
 ## License
 

@@ -176,6 +176,7 @@ Verwendung:
   hush init [--no-passphrase]   Schlüsselpaar erzeugen
   hush remember                 Auf diesem Gerät ohne Passphrase entsperren
   hush forget                   Auf diesem Gerät wieder nach der Passphrase fragen
+  hush update                   Auf die neueste Version aktualisieren
   hush version                  Version anzeigen
 
 Daten:   %s (änderbar über HUSH_HOME)
@@ -238,4 +239,16 @@ Sprache: HUSH_LANG=de oder HUSH_LANG=en
 	"opened.unknown_recipient": "unbekannt (%s)",
 	"sealed.hint_many":         "Füge die Nachricht jetzt z. B. in Telegram ein. Nur %s können sie lesen.",
 	"err.recipients":           "Ungültige Empfängerliste: höchstens 64 Empfänger, keiner doppelt.",
+
+	"update.checking":         "Suche nach Updates …",
+	"update.current":          "hush %s ist aktuell.",
+	"update.installing":       "Installiere hush %s …",
+	"update.done":             "hush wurde von %s auf %s aktualisiert. Die neue Version gilt ab dem nächsten Start.",
+	"cli.usage_update":        "Verwendung: hush update",
+	"err.update_dev":          "Das ist eine selbst gebaute Version. Aktualisiere sie aus dem Quellcode (go install github.com/johnnyjack123/hush@latest).",
+	"err.update_unsigned":     "Das neueste Release ist nicht mit dem hush-Release-Schlüssel signiert. Update abgebrochen.",
+	"err.update_no_download":  "Das neueste Release enthält keine Version für dieses System.",
+	"err.update_checksum":     "Der Download passt nicht zur signierten Prüfsumme. Update abgebrochen.",
+	"err.update_not_writable": "hush kann sich nicht selbst ersetzen (keine Schreibrechte). Wurde es über einen Paketmanager installiert? Dann aktualisiere es darüber.",
+	"err.update_self_test":    "Die neue Version startet auf diesem System nicht. Update abgebrochen, die bisherige Version bleibt.",
 }

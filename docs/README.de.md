@@ -47,6 +47,8 @@ Fertige Programme gibt es unter [Releases](https://github.com/johnnyjack123/hush
   `wl-clipboard` (Wayland) oder `xclip`/`xsel` (X11) benötigt.
 - **macOS:** Die Programme sind nicht signiert. Einmalig `xattr -d com.apple.quarantine hush` ausführen.
 
+Neuere Versionen installierst du mit `hush update`. Von sich aus sucht hush nie nach Updates.
+
 Aus dem Quellcode (Go ≥ 1.27):
 
 ```sh
@@ -85,6 +87,7 @@ hush add Alice hush1…             # Kontakt hinzufügen
 hush init [--no-passphrase]       # Schlüsselpaar ohne Oberfläche erzeugen
 hush remember                     # auf diesem Gerät ohne Passphrase entsperren
 hush forget                       # auf diesem Gerät wieder nach der Passphrase fragen
+hush update                       # neueste Version installieren
 ```
 
 Im Terminal zeigt `hush decrypt` den Text eingerückt und mit sichtbar gemachten Steuerzeichen an, damit eine
@@ -126,6 +129,10 @@ alternativen Bildschirm des Terminals, entschlüsselte Texte bleiben also nicht 
 deckt die ganze Empfängerliste ab, niemand darauf kann sie also an Dritte weiterleiten, als wäre sie für diese
 bestimmt. Jeder Empfänger sieht, an wen die Nachricht noch ging.
 
+**Updates.** `hush update` installiert nur ein Release, dessen Prüfsummen mit dem eingebauten hush-Release-Schlüssel
+signiert sind, prüft den Download dagegen und stellt sicher, dass die neue Version startet, bevor sie die alte
+ersetzt. Der Signierschlüssel existiert nur als Secret der Release-Action dieses Repos.
+
 **Grenzen.** hush schützt nicht vor Schadsoftware auf deinem Rechner oder dem des Empfängers. Gegen
 Wiederholung einer alten Nachricht hilft nur der angezeigte Sendezeitpunkt.
 
@@ -159,7 +166,10 @@ Ein Release entsteht automatisch, sobald ein Tag gepusht wird:
 git tag v0.1.0 && git push origin v0.1.0
 ```
 
-GitHub Actions baut dann mit [GoReleaser](https://goreleaser.com) die Programme für alle Plattformen.
+GitHub Actions baut dann mit [GoReleaser](https://goreleaser.com) die Programme für alle Plattformen,
+signiert `checksums.txt` mit dem Secret `HUSH_RELEASE_KEY` der Umgebung `release` und veröffentlicht das Release.
+`go run ./tools/releasesign -keygen` erzeugt ein neues Schlüsselpaar; der öffentliche Schlüssel gehört nach
+`internal/update/key.go`.
 
 Nach einer Änderung an den Abhängigkeiten muss die Lizenzübersicht neu erzeugt werden (die CI prüft das):
 

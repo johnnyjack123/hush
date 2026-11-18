@@ -3,6 +3,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -21,6 +22,7 @@ import (
 	"github.com/johnnyjack123/hush/internal/store"
 	"github.com/johnnyjack123/hush/internal/termsafe"
 	"github.com/johnnyjack123/hush/internal/tui"
+	"github.com/johnnyjack123/hush/internal/update"
 )
 
 var T = i18n.T
@@ -30,6 +32,7 @@ var errUsage = errors.New("usage")
 
 // Run executes the command line and returns the process exit code.
 func Run(args []string, version string) int {
+	update.Cleanup()
 	var err error
 	cmd := ""
 	if len(args) > 0 {
@@ -54,6 +57,8 @@ func Run(args []string, version string) int {
 		err = cmdRemember(args)
 	case "forget":
 		err = cmdForget(args)
+	case "update":
+		err = cmdUpdate(args, version)
 	case "version", "--version", "-v":
 		fmt.Println("hush", version)
 	case "help", "--help", "-h":
@@ -146,6 +151,36 @@ func cmdRemember(args []string) error {
 	}
 	fmt.Fprintln(os.Stderr, T("status.remembered"))
 	return nil
+}
+
+// cmdUpdate installs the latest release. It only runs when asked: hush
+// does not contact anything on its own.
+func cmdUpdate(args []string, current string) error {
+	if len(args) > 0 {
+		return usageError("cli.usage_update")
+	}
+	if !update.Supported(current) {
+		return update.ErrDevBuild
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	fmt.Fprintln(os.Stderr, T("update.checking"))
+	rel, err := update.Latest(ctx)
+	if err != nil {
+		return err
+	}
+	newer, err := update.Newer(rel.Version, current)
+	if err != nil {
+		return err
+	}
+	if !newer {
+		return out(T("update.current", current))
+	}
+	fmt.Fprintln(os.Stderr, T("update.installing", rel.Version))
+	if err := update.Install(ctx, rel); err != nil {
+		return err
+	}
+	return out(T("update.done", current, rel.Version))
 }
 
 func cmdForget(args []string) error {

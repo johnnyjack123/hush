@@ -49,6 +49,8 @@ Download, unpack, run.
   (Wayland) or `xclip`/`xsel` (X11).
 - **macOS:** the binaries are not signed. Run `xattr -d com.apple.quarantine hush` once.
 
+Later versions install with `hush update`. hush never checks for updates by itself.
+
 From source (Go ≥ 1.27):
 
 ```sh
@@ -87,6 +89,7 @@ hush add Alice hush1…             # add a contact
 hush init [--no-passphrase]       # create a key pair without the interface
 hush remember                     # unlock without the passphrase on this device
 hush forget                       # ask for the passphrase on this device again
+hush update                       # install the latest release
 ```
 
 In a terminal, `hush decrypt` shows the text indented and with control characters made visible, so
@@ -127,6 +130,11 @@ screen, so decrypted text does not remain in the scrollback.
 signature covers the whole list, so nobody on it can forward the message to someone else as if it
 had been meant for them. Every recipient sees who else received it.
 
+**Updates.** `hush update` only installs a release whose checksums are signed with the hush release
+key built into the program, checks the download against them and makes sure the new version starts
+before replacing the old one. The signing key exists only as a secret of this repository's
+release workflow.
+
 **Limits.** hush does not protect against malware on your machine or the recipient's. Against the
 replay of an old message, only the displayed send time helps.
 
@@ -159,7 +167,10 @@ Pushing a tag creates a release automatically:
 git tag v0.1.0 && git push origin v0.1.0
 ```
 
-GitHub Actions then builds the binaries for all platforms with [GoReleaser](https://goreleaser.com).
+GitHub Actions then builds the binaries for all platforms with [GoReleaser](https://goreleaser.com),
+signs `checksums.txt` with the `HUSH_RELEASE_KEY` secret of the `release` environment and publishes
+the release. `go run ./tools/releasesign -keygen` creates a new key pair; its public key goes into
+`internal/update/key.go`.
 
 After changing dependencies, regenerate the license overview (CI checks it):
 

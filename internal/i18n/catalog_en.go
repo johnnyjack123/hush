@@ -176,6 +176,7 @@ Usage:
   hush init [--no-passphrase]   Create your key pair
   hush remember                 Unlock without the passphrase on this device
   hush forget                   Ask for the passphrase on this device again
+  hush update                   Update to the latest release
   hush version                  Show the version
 
 Data:     %s (override with HUSH_HOME)
@@ -238,4 +239,16 @@ Language: HUSH_LANG=en or HUSH_LANG=de
 	"opened.unknown_recipient": "unknown (%s)",
 	"sealed.hint_many":         "Paste the message into Telegram or any messenger now. Only %s can read it.",
 	"err.recipients":           "Invalid list of recipients: at most 64, none twice.",
+
+	"update.checking":         "Checking for updates …",
+	"update.current":          "hush %s is up to date.",
+	"update.installing":       "Installing hush %s …",
+	"update.done":             "hush was updated from %s to %s. The new version takes effect from the next start.",
+	"cli.usage_update":        "Usage: hush update",
+	"err.update_dev":          "This is a self-built version. Update it from source (go install github.com/johnnyjack123/hush@latest).",
+	"err.update_unsigned":     "The latest release is not signed with the hush release key. Update cancelled.",
+	"err.update_no_download":  "The latest release has no version for this system.",
+	"err.update_checksum":     "The download does not match its signed checksum. Update cancelled.",
+	"err.update_not_writable": "hush cannot replace itself (no write permission). Was it installed by a package manager? Then update it there.",
+	"err.update_self_test":    "The new version does not start on this system. Update cancelled, the current version stays.",
 }

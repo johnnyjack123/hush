@@ -16,6 +16,7 @@ import (
 	"github.com/johnnyjack123/hush/internal/message"
 	"github.com/johnnyjack123/hush/internal/store"
 	"github.com/johnnyjack123/hush/internal/termsafe"
+	"github.com/johnnyjack123/hush/internal/update"
 )
 
 var catalogs = map[string]map[string]string{
@@ -85,6 +86,12 @@ var errorKeys = []struct {
 	{store.ErrDeviceStale, "err.device_stale"},
 	{message.ErrNotText, "err.not_text"},
 	{message.ErrRecipients, "err.recipients"},
+	{update.ErrDevBuild, "err.update_dev"},
+	{update.ErrUnsigned, "err.update_unsigned"},
+	{update.ErrNoDownload, "err.update_no_download"},
+	{update.ErrChecksum, "err.update_checksum"},
+	{update.ErrNotWritable, "err.update_not_writable"},
+	{update.ErrSelfTest, "err.update_self_test"},
 	{keys.ErrInvalidPublicKey, "err.invalid_key"},
 	{message.ErrNoMessage, "err.no_message"},
 	{message.ErrNotForMe, "err.not_for_me"},

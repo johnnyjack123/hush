@@ -28,6 +28,11 @@ archives:
 checksum:
   name_template: checksums.txt
 
+# Published by the release workflow once checksums.txt is signed, so that
+# "hush update" never sees a release without its signature.
+release:
+  draft: true
+
 changelog:
   sort: asc
   filters:

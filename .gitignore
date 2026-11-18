@@ -1,0 +1,22 @@
+# Build output
+/dist/
+/hush
+/hush.exe
+*.exe
+*.test
+*.out
+
+# Local hush data when testing with HUSH_HOME inside the repo
+identity.key
+contacts.json
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+.env.*

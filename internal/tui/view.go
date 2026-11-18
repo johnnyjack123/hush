@@ -32,7 +32,12 @@ func (m Model) View() string {
 	}
 
 	lw, rw, bh := m.dims()
-	left := box(T("contacts.title"), m.viewContacts(lw-4, bh-2), lw, bh, m.mode == modeBrowse)
+	title := T("contacts.title")
+	if len(m.marked) > 0 {
+		// Marks may have scrolled out of view, and they decide who e encrypts for.
+		title = T("contacts.title_marked", len(m.marked))
+	}
+	left := box(title, m.viewContacts(lw-4, bh-2), lw, bh, m.mode == modeBrowse)
 	title, body := m.viewRight(rw-4, bh-2)
 	right := box(title, body, rw, bh, m.mode != modeBrowse)
 	return lipgloss.JoinVertical(lipgloss.Left,
@@ -106,7 +111,9 @@ func (m Model) viewRight(w, h int) (title, body string) {
 	switch m.mode {
 	case modeCompose:
 		names := contactNames(m.composeTo)
-		return T("compose.title", names), sDim.Render(T("compose.hint", names)) + "\n\n" + m.compose.View()
+		// One line, so that a long list never pushes the text box out of view.
+		hint := ansi.Truncate(T("compose.hint", names), w, "…")
+		return T("compose.title", names), sDim.Render(hint) + "\n\n" + m.compose.View()
 	case modeSealed:
 		return T("sealed.title", m.sealedTo), m.content.View()
 	case modePaste:
@@ -136,7 +143,11 @@ func (m Model) viewContact(c *store.Contact, w int) string {
 	if c.Verified {
 		status = sOK.Render("✓ " + T("contact.verified"))
 	}
-	lines := []string{
+	var lines []string
+	if len(m.marked) > 0 {
+		lines = append(lines, sAccent.Render("● "+T("contact.marked_hint", contactNames(m.recipients()))), "")
+	}
+	lines = append(lines,
 		row(T("contact.fingerprint"), labelWidth, sAccent.Bold(true).Render(pk.Fingerprint().String())),
 		row(T("contact.status"), labelWidth, status),
 		row(T("contact.added"), labelWidth, i18n.Date(c.Added)),
@@ -144,7 +155,7 @@ func (m Model) viewContact(c *store.Contact, w int) string {
 		sDim.Render(T("contact.public_key")),
 		hardWrap(pk.String(), w),
 		"",
-	}
+	)
 	if !c.Verified {
 		lines = append(lines,
 			sWarn.Render(T("contact.verify_hint", c.Name)),

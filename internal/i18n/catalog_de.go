@@ -251,4 +251,9 @@ Sprache: HUSH_LANG=de oder HUSH_LANG=en
 	"err.update_checksum":     "Der Download passt nicht zur signierten Prüfsumme. Update abgebrochen.",
 	"err.update_not_writable": "hush kann sich nicht selbst ersetzen (keine Schreibrechte). Wurde es über einen Paketmanager installiert? Dann aktualisiere es darüber.",
 	"err.update_self_test":    "Die neue Version startet auf diesem System nicht. Update abgebrochen, die bisherige Version bleibt.",
+
+	"contacts.title_marked": "Kontakte · ● %d",
+	"contact.marked_hint":   "e verschlüsselt für die Markierten: %s · esc hebt die Markierung auf",
+	"names.more":            "+%d weitere",
+	"cli.encrypting_for":    "Verschlüsselt für: %s",
 }

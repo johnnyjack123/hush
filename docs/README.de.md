@@ -127,7 +127,9 @@ alternativen Bildschirm des Terminals, entschlüsselte Texte bleiben also nicht 
 
 **Mehrere Empfänger.** Eine Nachricht an mehrere Kontakte wird einmal für alle verschlüsselt. Die Signatur
 deckt die ganze Empfängerliste ab, niemand darauf kann sie also an Dritte weiterleiten, als wäre sie für diese
-bestimmt. Jeder Empfänger sieht, an wen die Nachricht noch ging.
+bestimmt. Jeder Empfänger sieht, an wen der Absender sie adressiert hat. Diese Liste ist die signierte Angabe des
+Absenders – an wen eine Nachricht tatsächlich noch verschlüsselt wurde, kann hush nicht sehen. Namen mit Leerzeichen
+stehen auf der Kommandozeile in Anführungszeichen: `hush encrypt "Alice Müller" bob`.
 
 **Updates.** `hush update` installiert nur ein Release, dessen Prüfsummen mit dem eingebauten hush-Release-Schlüssel
 signiert sind, prüft den Download dagegen und stellt sicher, dass die neue Version startet, bevor sie die alte

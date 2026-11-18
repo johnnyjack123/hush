@@ -128,7 +128,9 @@ screen, so decrypted text does not remain in the scrollback.
 
 **Several recipients.** A message for several contacts is encrypted once to all of them. The
 signature covers the whole list, so nobody on it can forward the message to someone else as if it
-had been meant for them. Every recipient sees who else received it.
+had been meant for them. Every recipient sees whom the sender addressed; that list is the sender's
+signed statement, as hush cannot see whom else a message was really encrypted to. Names with
+spaces are quoted on the command line: `hush encrypt "Alice Müller" bob`.
 
 **Updates.** `hush update` only installs a release whose checksums are signed with the hush release
 key built into the program, checks the download against them and makes sure the new version starts

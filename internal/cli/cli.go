@@ -211,10 +211,17 @@ func cmdEncrypt(args []string) error {
 	if err != nil {
 		return err
 	}
-	to, err := pickContacts(book, args)
+	contacts, err := pickContacts(book, args)
 	if err != nil {
 		return err
 	}
+	// Shown before the text is entered, so a wrong recipient can be caught.
+	names := make([]string, len(contacts))
+	to := make([]keys.PublicKey, len(contacts))
+	for i, c := range contacts {
+		names[i], to[i] = termsafe.Line(c.Name), c.PublicKey()
+	}
+	fmt.Fprintln(os.Stderr, T("cli.encrypting_for", strings.Join(names, ", ")))
 	id, err := loadIdentity(s)
 	if err != nil {
 		return err
@@ -245,24 +252,33 @@ func cmdEncrypt(args []string) error {
 	return out(sealed)
 }
 
-// pickContacts resolves each argument to a contact. Before hush supported
-// several recipients, all arguments formed one name ("hush encrypt Alice
-// Müller"), so that reading is kept when the single words are no contacts.
-func pickContacts(book *store.Book, args []string) ([]keys.PublicKey, error) {
-	var to []keys.PublicKey
+// pickContacts resolves each argument to one contact; names with spaces are
+// quoted. Before hush supported several recipients, all arguments formed one
+// name ("hush encrypt Alice Müller"). That reading is kept only when none of
+// the words is a contact on its own, so a mistyped second name never turns
+// a message for two people into one for somebody else.
+func pickContacts(book *store.Book, args []string) ([]store.Contact, error) {
+	var to []store.Contact
+	var missing []string
 	for _, a := range args {
 		i := book.Index(a)
 		if i < 0 {
-			if j := book.Index(strings.Join(args, " ")); j >= 0 {
-				return []keys.PublicKey{book.Contacts[j].PublicKey()}, nil
-			}
-			return nil, errors.New(T("cli.unknown_contact", termsafe.Line(a)))
+			missing = append(missing, a)
+			continue
 		}
-		if pk := book.Contacts[i].PublicKey(); !slices.Contains(to, pk) {
-			to = append(to, pk)
+		if !slices.ContainsFunc(to, func(c store.Contact) bool { return c.Key == book.Contacts[i].Key }) {
+			to = append(to, book.Contacts[i])
 		}
 	}
-	return to, nil
+	switch {
+	case len(missing) == 0:
+		return to, nil
+	case len(to) == 0 && len(args) > 1:
+		if j := book.Index(strings.Join(args, " ")); j >= 0 {
+			return []store.Contact{book.Contacts[j]}, nil
+		}
+	}
+	return nil, errors.New(T("cli.unknown_contact", termsafe.Line(missing[0])))
 }
 
 func cmdDecrypt(args []string) error {

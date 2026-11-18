@@ -1,11 +1,13 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/johnnyjack123/hush/internal/keys"
 	"github.com/johnnyjack123/hush/internal/store"
 )
 
@@ -76,5 +78,35 @@ func TestMessageToSeveralContacts(t *testing.T) {
 	a = press(a, tea.KeyEsc)
 	if len(a.marked) != 0 {
 		t.Fatal("esc did not clear the marks")
+	}
+}
+
+func TestMarksStayVisibleAndComposeFits(t *testing.T) {
+	useFakeClipboard(t)
+	s, _ := newStoreWithIdentity(t)
+	book, _ := s.LoadContacts()
+	for i := range 30 {
+		other, _ := keys.Generate()
+		book.Add(fmt.Sprintf("Person-with-a-long-name-%02d", i), other.Public())
+	}
+	s.SaveContacts(book)
+	m := newModel(t, s)
+	m = send(m, tea.WindowSizeMsg{Width: 80, Height: 24})
+	for range 30 {
+		m = send(m, tea.KeyMsg{Type: tea.KeySpace})
+		m = press(m, tea.KeyDown)
+	}
+	m = press(m, tea.KeyUp)
+	m = send(m, statusExpiredMsg{id: m.statusID})
+	if v := checkView(t, m, "29-many-marked"); !strings.Contains(v, T("contacts.title_marked", 30)) {
+		t.Error("contact list title does not show the marks")
+	}
+	m = typeText(m, "e")
+	m = typeText(m, "SECRETTEXT")
+	if v := checkView(t, m, "30-compose-many"); !strings.Contains(v, "SECRETTEXT") {
+		t.Error("the typed text is pushed out of view")
+	}
+	if names := contactNames(m.composeTo); !strings.HasSuffix(names, T("names.more", 27)) {
+		t.Errorf("recipient summary %q", names)
 	}
 }

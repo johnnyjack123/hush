@@ -251,4 +251,9 @@ Language: HUSH_LANG=en or HUSH_LANG=de
 	"err.update_checksum":     "The download does not match its signed checksum. Update cancelled.",
 	"err.update_not_writable": "hush cannot replace itself (no write permission). Was it installed by a package manager? Then update it there.",
 	"err.update_self_test":    "The new version does not start on this system. Update cancelled, the current version stays.",
+
+	"contacts.title_marked": "Contacts · ● %d",
+	"contact.marked_hint":   "e encrypts for the marked contacts: %s · esc clears the marks",
+	"names.more":            "+%d more",
+	"cli.encrypting_for":    "Encrypting for: %s",
 }

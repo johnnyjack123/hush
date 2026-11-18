@@ -822,10 +822,17 @@ func (m *Model) recipients() []store.Contact {
 	return to
 }
 
+// contactNames lists up to three names and counts the rest, which keeps
+// titles and status lines readable for messages to many contacts.
 func contactNames(cs []store.Contact) string {
-	names := make([]string, len(cs))
+	const shown = 3
+	var names []string
 	for i, c := range cs {
-		names[i] = c.Name
+		if i == shown && len(cs) > shown+1 {
+			names = append(names, T("names.more", len(cs)-shown))
+			break
+		}
+		names = append(names, c.Name)
 	}
 	return strings.Join(names, ", ")
 }
